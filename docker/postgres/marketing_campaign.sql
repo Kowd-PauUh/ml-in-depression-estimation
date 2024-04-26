@@ -1,6 +1,6 @@
 CREATE SCHEMA marketing_campaign;
 
-CREATE TABLE marketing_campaign.campaign (
+CREATE TABLE marketing_campaign.campaigns (
     contact_id SERIAL PRIMARY KEY,
     client_id INTEGER REFERENCES marketing_campaign.clients(client_id) NOT NULL,
     contact_date DATE NOT NULL,
