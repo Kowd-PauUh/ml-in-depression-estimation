@@ -10,3 +10,4 @@ tqdm==4.66.2
 
 # eda
 jupyter==1.0.0
+seaborn==0.13.2
