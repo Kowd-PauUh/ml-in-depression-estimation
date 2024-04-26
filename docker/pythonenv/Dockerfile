@@ -3,8 +3,7 @@ FROM python:3.10-slim-buster
 ARG PROJECT_DIR
 
 COPY docker/pythonenv/entrypoint.sh /
-COPY docker/pythonenv/init.sh /init/
-COPY docker/postgres/*.sql /init/
+COPY docker/postgres/*.sql /postgres/
 COPY docker/pythonenv/requirements.txt /
 COPY src/ ${PROJECT_DIR}/src/
 COPY data/ ${PROJECT_DIR}/data/
@@ -17,7 +16,6 @@ RUN printf '#!/bin/sh\nexit 0\n' > /usr/sbin/policy-rc.d \
  && apt-get autoremove -yqq --purge \
  && apt-get clean \
  && chmod +x /entrypoint.sh \
- && chmod +x /init/init.sh \
  && pip install --no-cache-dir -U -r /requirements.txt
 
 WORKDIR ${PROJECT_DIR}
