@@ -34,6 +34,9 @@ if __name__ == '__main__':
         lambda val: bool_mapping.get(val, val) if isinstance(val, str) else val
     )
 
+    # drop inconsistent entries
+    prev_camp_df = prev_camp_df[prev_camp_df['client_id'].isin(curr_camp_df['client_id'])]
+
     session = make_session(
         postgres_user=POSTGRES_USER,
         postgres_password=POSTGRES_PASSWORD,
@@ -43,13 +46,17 @@ if __name__ == '__main__':
     )
 
     try:
+        for _, row in tqdm(curr_camp_df.iterrows(), desc='Adding campaigns'):
+            values = row.to_dict()
+            values['age'] = int(values['age']) if values['age'] > 0 else None
+            create_client(
+                session=session,
+                **values
+            )
+        session.commit()
+
         for _, row in tqdm(prev_camp_df.iterrows(), desc='Adding clients'):
             create_campaign(
-                session=session,
-                **row.to_dict()
-            )
-        for _, row in tqdm(curr_camp_df.iterrows(), desc='Adding campaigns'):
-            create_client(
                 session=session,
                 **row.to_dict()
             )
