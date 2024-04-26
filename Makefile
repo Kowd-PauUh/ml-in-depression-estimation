@@ -25,7 +25,7 @@ stop:
 	docker-compose -f docker/docker-compose.yml -p $(PROJECT_NAME) stop
 
 shell: 
-	docker exec -it ${PROJECT_NAME}-pythonenv /bin/sh -c "bash"
+	docker exec -it ${PROJECT_NAME}-pythonenv /bin/sh -c "/entrypoint.sh bash"
 
 app:
 	docker exec -it ${PROJECT_NAME}-pythonenv /bin/sh -c "/entrypoint.sh app"

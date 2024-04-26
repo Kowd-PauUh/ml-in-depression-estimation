@@ -13,7 +13,7 @@ CREATE TABLE marketing_campaign.clients (
     job VARCHAR(50) NOT NULL,
     marital VARCHAR(50) NOT NULL,
     education VARCHAR(50) NOT NULL,
-    default BOOLEAN NOT NULL,
+    "default" BOOLEAN NOT NULL,
     balance INTEGER NOT NULL,
     housing BOOLEAN NOT NULL,
     loan BOOLEAN NOT NULL,
