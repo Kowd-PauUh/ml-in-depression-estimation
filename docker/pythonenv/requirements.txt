@@ -1,0 +1,12 @@
+# db
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.29
+
+# data processing
+scikit-learn==1.4.2
+pandas==2.2.2
+numpy==1.26.4
+tqdm==4.66.2
+
+# eda
+jupyter==1.0.0

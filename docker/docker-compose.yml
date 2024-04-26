@@ -1,0 +1,37 @@
+services:
+    pythonenv:
+        container_name: ${PROJECT_NAME}-pythonenv
+        build:
+            context: ..
+            dockerfile: docker/pythonenv/Dockerfile
+            args:
+                PROJECT_DIR: ${PROJECT_DIR}
+        depends_on:
+            - postgres
+        environment:
+            - "PROJECT_DIR=${PROJECT_DIR}"
+            - "POSTGRES_DB_NAME=marketing_campaign"
+            - "POSTGRES_USER=postgres"
+            - "POSTGRES_PASSWORD=postgres"
+            - "POSTGRES_HOST=${POSTGRES_HOST}"
+            - "POSTGRES_PORT=8502"
+        ports:
+            - "8501:8000"  # jupyter port
+        volumes:
+            - ${PROJECT_DIR}:${PROJECT_DIR}
+
+    # Postgres DB
+    postgres:
+        container_name: ${PROJECT_NAME}-postgres
+        build:
+            context: ..
+            dockerfile: docker/postgres/Dockerfile
+        environment:
+            - "POSTGRES_DB_NAME=marketing_campaign"
+            - "POSTGRES_USER=postgres"
+            - "POSTGRES_PASSWORD=postgres"
+            - "POSTGRES_HOST=${POSTGRES_HOST}"
+            - "POSTGRES_PORT=8502"
+        ports:
+            - "8502:5432"
+
