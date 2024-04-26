@@ -9,7 +9,7 @@ class Campaign(Base):
     __schema__ = 'marketing_campaign'
     __tablename__ = 'campaigns'
 
-    concact_id = Column(Integer, primary_key=True)
+    contact_id = Column(Integer, primary_key=True)
     client_id = Column(Integer, ForeignKey('marketing_campaign.clients.client_id'))
     contact_date = Column(DateTime(timezone=False), nullable=False)
     contact_outcome = Column(String(256), nullable=False)
