@@ -46,7 +46,6 @@ def continuous_features_corr_plot(
 ):
     _corr_plot(df=df, features=features, target=target, method='pearson')
     plt.title("Pearson's correllation matrix (continuous features)")
-
     return plt.gcf()
 
 
@@ -57,5 +56,4 @@ def categorical_features_corr_plot(
 ):
     _corr_plot(df=df, features=features, target=target, method=cramers_v)
     plt.title("Cramer's V correllation matrix (categorical features)")
-    
     return plt.gcf()
