@@ -6,7 +6,7 @@
 
 ## Project tree overview
 The project is organized as following
-```python
+```
 project/                                              
 ├── data/                    # data
 │
