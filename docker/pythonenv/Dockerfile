@@ -3,7 +3,6 @@ FROM python:3.10-slim-buster
 ARG PROJECT_DIR
 
 COPY docker/pythonenv/entrypoint.sh /
-COPY docker/postgres/*.sql /postgres/
 COPY docker/pythonenv/requirements.txt /
 COPY src/ ${PROJECT_DIR}/src/
 COPY data/ ${PROJECT_DIR}/data/

@@ -27,8 +27,8 @@ stop:
 shell: 
 	docker exec -it ${PROJECT_NAME}-pythonenv /bin/sh -c "/entrypoint.sh bash"
 
-app:
-	docker exec -it ${PROJECT_NAME}-pythonenv /bin/sh -c "/entrypoint.sh app"
+# app:
+# 	docker exec -it ${PROJECT_NAME}-pythonenv /bin/sh -c "/entrypoint.sh app"
 
 notebook:
 	docker exec -it ${PROJECT_NAME}-pythonenv /bin/sh -c "/entrypoint.sh notebook"

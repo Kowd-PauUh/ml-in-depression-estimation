@@ -1,7 +1,3 @@
-# db
-psycopg2-binary==2.9.9
-sqlalchemy==2.0.29
-
 # data processing
 scikit-learn==1.4.2
 pandas==2.2.2
