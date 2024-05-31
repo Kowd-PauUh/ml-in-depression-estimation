@@ -9,10 +9,10 @@ def cross_validate_model(
     model,
     X: pd.DataFrame,
     Y: pd.DataFrame,
+    n_folds: int,
+    iterations: int,
     score_fns: List[Callable],
-    score_average: str = 'weighted',
-    n_folds: int = 5,
-    iterations: int = 5
+    **kwargs
 ):
     metrics = {fn.__name__: [] for fn in score_fns}
     data = pd.concat([X.copy(), Y.copy()], axis=1)
@@ -32,6 +32,6 @@ def cross_validate_model(
             y_pred = model.predict(shuffle.iloc[test_index].drop(target, axis=1))
 
             for fn in score_fns:
-                metrics[fn.__name__].append(fn(y_test, y_pred, average=score_average))
+                metrics[fn.__name__].append(fn(y_test, y_pred, **kwargs))
     
     return metrics
