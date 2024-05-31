@@ -5,8 +5,9 @@ from sklearn.model_selection import KFold
 from tqdm.auto import tqdm, trange
 
 
-def cross_validate_model(
+def cross_validate_sklearn_model(
     model,
+    inference_fn: Callable,
     X: pd.DataFrame,
     Y: pd.DataFrame,
     n_folds: int,
@@ -29,7 +30,7 @@ def cross_validate_model(
             )
 
             y_test = shuffle.iloc[test_index][target].to_numpy()
-            y_pred = model.predict(shuffle.iloc[test_index].drop(target, axis=1))
+            y_pred = inference_fn(shuffle.iloc[test_index].drop(target, axis=1))
 
             for fn in score_fns:
                 metrics[fn.__name__].append(fn(y_test, y_pred, **kwargs))
