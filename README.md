@@ -17,10 +17,11 @@ project/
 │   └── docker-compose.yml
 │
 ├── src/                     # code modules
-│   └── module_x/
-│       ├── ...
-│       └── __init__.py
-│
+│   ├── module_x/
+│   │   ├── ...
+│   │   └── __init__.py
+│   └── __init__.py
+|
 ├── .dockerignore
 ├── .gitignore
 ├── Makefile                 # tasks automation
