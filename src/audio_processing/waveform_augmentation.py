@@ -21,7 +21,7 @@ def normalize_by_std(waveform: torch.Tensor):
     return waveform / std
 
 
-def resample_waveform(waveform: torch.Tensor, orig_sample_rate: int) -> torch.Tensor:
+def random_resample(waveform: torch.Tensor, orig_sample_rate: int) -> torch.Tensor:
     """
     Resamples the waveform by a random factor uniformly chosen in range [0.8, 1.25].
 
@@ -44,3 +44,12 @@ def resample_waveform(waveform: torch.Tensor, orig_sample_rate: int) -> torch.Te
     resampled_waveform = resampler(waveform)
     
     return resampled_waveform
+
+
+def random_gain(waveform: torch.Tensor) -> torch.Tensor:
+    """Multiplies waveform by a random gain chosen uniformly in range [-6.0, +6.0] dB."""
+    gain_db = random.uniform(-6.0, 6.0)
+    gain_linear = 10 ** (gain_db / 20.0)
+    
+    waveform_with_gain = waveform * gain_linear
+    return waveform_with_gain
