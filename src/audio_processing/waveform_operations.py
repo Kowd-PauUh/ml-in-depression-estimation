@@ -51,7 +51,7 @@ def trim_waveform(
     torch.Tensor
         Trimmed waveform.
     """
-    start_idx = int(sr * start_time) if start_time is not None else None
-    end_idx = int(sr * end_time) if end_time is not None else None
+    start_idx = int(sample_rate * start_time) if start_time is not None else None
+    end_idx = int(sample_rate * end_time) if end_time is not None else None
 
     return waveform[:, start_idx:end_idx]
