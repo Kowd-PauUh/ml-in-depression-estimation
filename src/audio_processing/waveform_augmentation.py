@@ -25,7 +25,8 @@ def normalize_by_std(waveform: torch.Tensor):
 def random_resample(
     waveform: torch.Tensor, 
     orig_sample_rate: int, 
-    trim: bool = True
+    trim: bool = True,
+    pad: bool = True
 ) -> torch.Tensor:
     """
     Resamples the waveform by a random factor uniformly chosen in range [0.8, 1.25].
@@ -38,6 +39,8 @@ def random_resample(
         The original sample rate of the waveform.
     trim : bool, optional
         Boolean flag on whether to trim the resampled waveform to its original length.
+    pad : bool, optional
+        Boolean flag on whether to zero pad the resampled waveform to its original length.
 
     Returns
     -------
@@ -51,8 +54,14 @@ def random_resample(
     resampler = T.Resample(orig_freq=orig_sample_rate, new_freq=new_sample_rate)
     resampled_waveform = resampler(waveform)
 
-    if trim:
+    # trim if needed
+    if resampled_waveform.size(1) > original_len and trim:
         resampled_waveform = resampled_waveform[:, :original_len]
+
+    # zero pad if needed
+    if resampled_waveform.size(1) < original_len and pad:
+        padding = original_len - resampled_waveform.size(1)
+        resampled_waveform = torch.nn.functional.pad(resampled_waveform, (0, padding))
     
     return resampled_waveform
 
