@@ -51,3 +51,15 @@ def waveform_maximum_amplitude(waveform: torch.Tensor):
 def waveform_minimum_amplitude(waveform: torch.Tensor):
     waveform_np = waveform.numpy().flatten()
     return np.max(np.abs(waveform_np))
+
+
+def waveform_hjorth_parameters(waveform: torch.Tensor):
+    waveform_np = waveform.numpy().flatten()
+    derivative = np.diff(waveform_np)
+    second_derivative = np.diff(derivative)
+    
+    activity = np.var(waveform_np)
+    mobility = np.sqrt(np.var(derivative) / activity)
+    complexity = np.sqrt(np.var(second_derivative) / np.var(derivative)) / mobility
+    
+    return activity, mobility, complexity
