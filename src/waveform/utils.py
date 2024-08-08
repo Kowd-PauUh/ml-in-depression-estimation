@@ -7,7 +7,8 @@ import torchaudio
 
 def load_waveform(
     audio_path: Path | str,
-    audio_format: str = 'wav'
+    audio_format: str = 'wav',
+    normalize: bool = False
 ) -> Tuple[torch.Tensor, int]:
     """
     Parameters
@@ -22,7 +23,7 @@ def load_waveform(
     Tuple[torch.Tensor, int]
         Tuple where the first element is a waveform (Tensor) and the second is a sample rate.
     """
-    waveform, sr = torchaudio.load(audio_path, format=audio_format)
+    waveform, sr = torchaudio.load(audio_path, format=audio_format, normalize=normalize)
     return waveform, sr
 
 
