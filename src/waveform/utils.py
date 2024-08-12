@@ -27,6 +27,34 @@ def load_waveform(
     return waveform, sr
 
 
+def save_waveform(
+    waveform: torch.Tensor,
+    sample_rate: int,
+    save_path: Path | str,
+    audio_format: str = 'wav'
+):
+    """
+    Save a waveform to an audio file.
+
+    Parameters
+    ----------
+    waveform : torch.Tensor
+        The waveform to save.
+    sample_rate : int
+        The sample rate of the waveform.
+    save_path : Path or str
+        Path where the audio file will be saved.
+    audio_format : str, optional
+        The format to save the audio file in. Defaults to 'wav'.
+    """
+    torchaudio.save(
+        uri=save_path, 
+        src=waveform, 
+        sample_rate=sample_rate, 
+        format=audio_format
+    )
+
+
 def trim_waveform(
     waveform: torch.Tensor,
     sample_rate: int,
