@@ -1,17 +1,24 @@
 # data processing
-scikit-learn==1.4.2
-pandas==2.2.2
-numpy==1.26.4
-tqdm==4.66.2
+scikit-learn
+pandas
+numpy
+tqdm
 
 # eda
-jupyter==1.0.0
-seaborn==0.13.2
+jupyter
+seaborn
 
 # modelling
-torch==2.0.0
-lightning==2.2.5
+torch
+lightning
 
 # audio processing
-torchaudio==2.0.1
-librosa==0.10.2
+torchaudio
+librosa
+
+# features extraction
+git+https://gitlab.com/Kowd-PauUh/disvoice.git
+
+# other
+fire
+loguru
