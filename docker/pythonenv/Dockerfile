@@ -11,7 +11,7 @@ ENV PYTHONPATH=${PROJECT_DIR}
 
 RUN printf '#!/bin/sh\nexit 0\n' > /usr/sbin/policy-rc.d \
  && apt-get update -yqq \
- && apt-get install -y --no-install-recommends curl tar \
+ && apt-get install -y --no-install-recommends curl tar build-essential praat git-all \
  && apt-get autoremove -yqq --purge \
  && apt-get clean \
  && chmod +x /entrypoint.sh \
