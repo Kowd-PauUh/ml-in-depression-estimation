@@ -1,8 +1,9 @@
+data/**
+
 # Git
 .git
 .gitignore
 .gitattributes
-
 
 # CI
 .codeclimate.yml
