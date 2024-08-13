@@ -2,11 +2,11 @@ from abc import ABC
 from typing import List, Callable
 
 import pandas as pd
-from sklearn.model_selection import KFold
+from sklearn.model_selection import GroupKFold
 from tqdm.auto import tqdm, trange
 
 
-class Evaluator(ABC):
+class BaseEvaluator(ABC):
     def shuffle_data(self, *args, **kwargs):
         raise NotImplementedError
 
@@ -39,10 +39,15 @@ class Evaluator(ABC):
         """
         crossval_results = {}
         
-        kf = KFold(n_splits=n_folds)
+        kf = GroupKFold(n_splits=n_folds)
         for _ in trange(iterations, desc='Cross validation'):
             self.shuffle_data()
-            for train_index, test_index in tqdm(list(kf.split(self.data)), desc='Splits evaluation', leave=False):
+            
+            for train_index, test_index in tqdm(
+                list(kf.split(self.data, groups=self.data_groups)), 
+                desc='Splits evaluation', 
+                leave=False
+            ):
                 metrics = self.train_and_evaluate(train_index, test_index)
 
                 for metric_name, metric_value in metrics.items():
