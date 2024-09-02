@@ -2,21 +2,28 @@ import os
 import random
 from collections import defaultdict
 from typing import Literal
+from pathlib import Path
 
 import lightning as L
 import pandas as pd
 import torch
 from loguru import logger
-from minio import Minio
-from sentence_transformers import InputExample
 from torch.utils.data import Dataset, DataLoader
+# from sklearn.model_selection import GroupShuffleSplit
 
 from ds_models.utils import compute_hash
+from ds_models.waveform.utils import load_waveform, trim_waveform
+from .dataset import FineTuningDataset
 
 
-class ResearchesDataModule(L.LightningDataModule):
+PROJECT_DIR = Path(os.environ['PROJECT_DIR'])
+PREPROCESSED_DATA_PATH = PROJECT_DIR / 'data/preprocessed_data'
+
+
+class FineTuningDataModule(L.LightningDataModule):
     def __init__(
         self,
+        *,
         # files location
         dataset_path: str | Path = PREPROCESSED_DATA_PATH / 'data.csv',
         split_df_path: str | Path = PREPROCESSED_DATA_PATH / 'split.csv',
@@ -24,9 +31,14 @@ class ResearchesDataModule(L.LightningDataModule):
         match_split_df_on: str = 'participant_id',
         grouping_column_name: str = 'participant_id',
         split_column_name: str = 'split',
+        timecode_column_names: List[str] = ['start_time', 'end_time'],
+        filepath_column_name: str = 'source',
+        target_column_name: str = 'phq-binary',
+        target_variable_type: Literal['binary', 'continuous'] = 'binary',
         train_val_split_name: str = 'train',
         test_split_name: str = 'test',
         # preprocessing
+        fast_mode: bool = True,
         downsample_to: int | None = None,
         val_size: float = 0.2,
         # training
@@ -44,10 +56,15 @@ class ResearchesDataModule(L.LightningDataModule):
         self.match_split_df_on = match_split_df_on
         self.grouping_column_name = grouping_column_name
         self.split_column_name = split_column_name
+        self.timecode_column_names = timecode_column_names
+        self.filepath_column_name = filepath_column_name
+        self.target_column_name = target_column_name
+        self.target_variable_type = target_variable_type
         self.train_val_split_name = train_val_split_name
         self.test_split_name = test_split_name
 
         # preprocessing
+        self.fast_mode = fast_mode
         self.downsample_to = downsample_to
         self.val_size = val_size
         self.train_size = 1 - val_size
@@ -115,21 +132,30 @@ class ResearchesDataModule(L.LightningDataModule):
     #     labels = torch.tensor([example.label for example in batch])
     #     return tokenizer_outputs, labels
 
-    def load_df(self):
+    def load_df(self) -> pd.DataFrame:
         logger.info(f"Using dataset at {self.dataset_path} with split data at {self.split_df_path}")
 
-        # read dataframe and optionally downsample
-        df = pd.read_csv(dataset_path)
-        if downsample_to and downsample_to >= len(df):
+        # read dataframe and downsample if needed
+        df = pd.read_csv(self.dataset_path)
+        if self.downsample_to and self.downsample_to >= len(df):
             logger.warning(
-                f'Tried to downsample dataset to {downsample_to} ' + \
+                f'Tried to downsample dataset to {self.downsample_to} ' + \
                 f'entries but it contains {len(df)} entries.'
             )
-        elif downsample_to:
-            df = df.sample(downsample_to, random_state=42)
-            logger.info(f'Dataset is downsampled to {downsample_to} entries.')
+        elif self.downsample_to:
+            df = df.sample(self.downsample_to, random_state=42)
+            logger.info(f'Dataset is downsampled to {self.downsample_to} entries.')
 
-        return pd.read_json(self.local_dataset_path, lines=True)
+        # assign split to each row in dataframe
+        split_df = pd.read_csv(self.split_df_path).set_index(self.match_split_df_on)
+        df[self.split_column_name] = df[self.match_split_df_on].apply(lambda i: split_df.loc[i][self.split_column_name])
+        available_splits = list(split_df[self.split_column_name].unique())
+        if self.train_val_split_name not in available_splits:
+            raise ValueError(f'Trying to use {self.train_val_split_name=} but vailable splits are: {available_splits}')
+        if self.test_split_name not in available_splits:
+            raise ValueError(f'Trying to use {self.test_split_name=} but vailable splits are: {available_splits}')
+
+        return df
 
     def train_dataloader(self):
         return DataLoader(
@@ -155,36 +181,3 @@ class ResearchesDataModule(L.LightningDataModule):
             collate_fn=self.collate_fn,
             drop_last=True,
         )
-
-
-# class ResearchesDataset(Dataset):
-#     def __init__(
-#         self,
-#         df,
-#         query_field: str = "query",
-#         document_field: str = "positive",
-#         query_prefix: str = "",
-#         document_prefix: str = "",
-#         seed: int = 42,
-#         samples_per_query: int | None = None,
-#     ):
-#         self.query_field = query_field
-#         self.document_field = document_field
-#         self.df = df[df[document_field].notna() & df[document_field].apply(lambda x: x != "")]
-#         n_queries = len(self.df[query_field].unique())
-#         logger.info(f"Loaded dataframe with {len(self.df)} examples and {n_queries} unique queries (document_field: "
-#                     f"{self.document_field})")
-#         self.query_to_samples = defaultdict(list)
-#         for query, positive in zip(self.df[query_field], self.df[document_field]):
-#             query = query_prefix + query
-#             positive = document_prefix + positive
-#             self.query_to_samples[query].append(InputExample(texts=[query, positive]))
-#         self.samples = list(self.query_to_samples.values())
-#         random.seed(seed)
-#         self.samples_per_query = samples_per_query
-
-#     def __len__(self):
-#         return len(self.samples)
-
-#     def __getitem__(self, i):
-#         return random.choice(self.samples[i][: self.samples_per_query])
