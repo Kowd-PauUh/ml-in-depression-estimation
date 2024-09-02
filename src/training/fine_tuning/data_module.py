@@ -86,29 +86,30 @@ class FineTuningDataModule(L.LightningDataModule):
         ]
         test_df = df[df["hash_fraction"] > self.train_size + self.val_size]
 
-        self.train_dataset = ResearchesDataset(
-            train_df,
-            query_field=self.query_field,
-            document_field=self.document_field,
-            query_prefix=self.query_prefix,
-            document_prefix=self.document_prefix,
+        # initialize fine-tuning datasets
+        self.train_dataset = FineTuningDataset(
+            df=train_df,
+            filepath_column_name=self.filepath_column_name,
+            start_time_column_name=self.start_time_column_name,
+            end_time_column_name=self.end_time_column_name,
+            fast_mode=self.fast_mode
         )
-        self.val_dataset = ResearchesDataset(
-            val_df,
-            query_field=self.query_field,
-            document_field=self.document_field,
-            query_prefix=self.query_prefix,
-            document_prefix=self.document_prefix,
-            samples_per_query=1,
+        self.val_dataset = FineTuningDataset(
+            df=val_df,
+            filepath_column_name=self.filepath_column_name,
+            start_time_column_name=self.start_time_column_name,
+            end_time_column_name=self.end_time_column_name,
+            fast_mode=self.fast_mode
         )
-        self.test_dataset = ResearchesDataset(
-            test_df,
-            query_field=self.query_field,
-            document_field=self.document_field,
-            query_prefix=self.query_prefix,
-            document_prefix=self.document_prefix,
-            samples_per_query=1,
+        self.test_dataset = FineTuningDataset(
+            df=test_df,
+            filepath_column_name=self.filepath_column_name,
+            start_time_column_name=self.start_time_column_name,
+            end_time_column_name=self.end_time_column_name,
+            fast_mode=self.fast_mode
         )
+
+        # log splits statistics
         n_samples = len(df)
         logger.info(
             f"Using dataset with following splits:\n"
@@ -131,31 +132,6 @@ class FineTuningDataModule(L.LightningDataModule):
     #     ]
     #     labels = torch.tensor([example.label for example in batch])
     #     return tokenizer_outputs, labels
-
-    def load_df(self) -> pd.DataFrame:
-        logger.info(f"Using dataset at {self.dataset_path} with split data at {self.split_df_path}")
-
-        # read dataframe and downsample if needed
-        df = pd.read_csv(self.dataset_path)
-        if self.downsample_to and self.downsample_to >= len(df):
-            logger.warning(
-                f'Tried to downsample dataset to {self.downsample_to} ' + \
-                f'entries but it contains {len(df)} entries.'
-            )
-        elif self.downsample_to:
-            df = df.sample(self.downsample_to, random_state=42)
-            logger.info(f'Dataset is downsampled to {self.downsample_to} entries.')
-
-        # assign split to each row in dataframe
-        split_df = pd.read_csv(self.split_df_path).set_index(self.match_split_df_on)
-        df[self.split_column_name] = df[self.match_split_df_on].apply(lambda i: split_df.loc[i][self.split_column_name])
-        available_splits = list(split_df[self.split_column_name].unique())
-        if self.train_val_split_name not in available_splits:
-            raise ValueError(f'Trying to use {self.train_val_split_name=} but vailable splits are: {available_splits}')
-        if self.test_split_name not in available_splits:
-            raise ValueError(f'Trying to use {self.test_split_name=} but vailable splits are: {available_splits}')
-
-        return df
 
     def train_dataloader(self):
         return DataLoader(
