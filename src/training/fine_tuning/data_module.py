@@ -13,7 +13,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from ds_models.utils import compute_hash
 from ds_models.waveform.utils import load_waveform, trim_waveform
-from .dataset import FineTuningDataset
+from src.training.fine_tuning.dataset import FineTuningDataset
 
 
 PROJECT_DIR = Path(os.environ['PROJECT_DIR'])
