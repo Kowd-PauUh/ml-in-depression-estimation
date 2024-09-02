@@ -74,17 +74,61 @@ class FineTuningDataModule(L.LightningDataModule):
         self.val_batch_size = val_batch_size
         self.augmentation = augmentation
 
-    def setup(self, stage: str = "train"):
-        df = self.load_df()
+    def load_df(self) -> pd.DataFrame:
+        logger.info(f"Using dataset at {self.dataset_path} with split data at {self.split_df_path}")
 
-        df["hash"] = df["query"].apply(compute_hash)
-        df["hash_fraction"] = df["hash"].apply(lambda x: (x % 100_001) / 100_000)
-        train_df = df[df["hash_fraction"] < self.train_size]
-        val_df = df[
-            (df["hash_fraction"] >= self.train_size)
-            & (df["hash_fraction"] < self.train_size + self.val_size)
-        ]
-        test_df = df[df["hash_fraction"] > self.train_size + self.val_size]
+        # read dataframe and downsample if needed
+        df = pd.read_csv(self.dataset_path)
+        if self.downsample_to and self.downsample_to >= len(df):
+            logger.warning(
+                f'Tried to downsample dataset to {self.downsample_to} ' + \
+                f'entries but it contains {len(df)} entries.'
+            )
+        elif self.downsample_to:
+            df = df.sample(self.downsample_to, random_state=42)
+            logger.info(f'Dataset is downsampled to {self.downsample_to} entries.')
+
+        # assign split to each row in dataframe
+        split_df = pd.read_csv(self.split_df_path).set_index(self.match_split_df_on)
+        df[self.split_column_name] = df[self.match_split_df_on].apply(lambda i: split_df.loc[i][self.split_column_name])
+        available_splits = list(split_df[self.split_column_name].unique())
+
+        # validate split names
+        if self.train_val_split_name not in available_splits:
+            raise ValueError(f'Trying to use {self.train_val_split_name=} but vailable splits are: {available_splits}')
+        if self.test_split_name not in available_splits:
+            raise ValueError(f'Trying to use {self.test_split_name=} but vailable splits are: {available_splits}')
+
+        return df
+
+    def setup(
+        self, 
+        df: pd.DataFrame | None = None, 
+        train_ids: List[int] | None = None,
+        val_ids: List[int] | None = None,
+        random_state: int = 42
+    ):
+        if df is None:
+            df = self.load_df()
+
+        test_df = df[df[self.split_column_name] == self.test_split_name]
+
+        if train_ids is not None and val_ids is not None:
+            train_df = df.iloc[train_ids]
+            val_df = df.iloc[val_ids]
+        else:
+            logger.info(
+                f'Setting up {self.__class__.__name__} without specifying train and val indices. '
+                f'Training data will be split into train ad val split with stratification '
+                f'with each group appearing in only one dataset'
+            )
+
+            # group stratified split for train and val df with random_state
+            train_val_df = df[df[self.split_column_name] == self.test_split_name]
+            train_df = ...
+            val_df = ...
+
+        return train_df, val_df, test_df
 
         # initialize fine-tuning datasets
         self.train_dataset = FineTuningDataset(
@@ -112,10 +156,10 @@ class FineTuningDataModule(L.LightningDataModule):
         # log splits statistics
         n_samples = len(df)
         logger.info(
-            f"Using dataset with following splits:\n"
-            f"Train: {len(train_df)} / {n_samples} ({len(train_df) / n_samples: .4f})\n"
-            f"Val: {len(val_df)} / {n_samples} ({len(val_df) / n_samples: .4f})\n"
-            f"Test: {len(test_df)} / {n_samples} ({len(test_df) / n_samples: .4f})"
+            f'Using dataset with following splits:\n'
+            f'Train: {len(train_df)} / {n_samples} ({len(train_df) / n_samples: .4f})\n'
+            f'Val: {len(val_df)} / {n_samples} ({len(val_df) / n_samples: .4f})\n'
+            f'Test: {len(test_df)} / {n_samples} ({len(test_df) / n_samples: .4f})'
         )
 
     # def collate_fn(self, batch) -> tuple[list[dict[str, torch.Tensor]], torch.Tensor]:
