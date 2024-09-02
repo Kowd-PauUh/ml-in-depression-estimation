@@ -1,7 +1,7 @@
 import os
 import random
 from collections import defaultdict
-from typing import Literal
+from typing import Literal, List
 from pathlib import Path
 
 import lightning as L
@@ -9,10 +9,9 @@ import pandas as pd
 import torch
 from loguru import logger
 from torch.utils.data import Dataset, DataLoader
-# from sklearn.model_selection import GroupShuffleSplit
+from sklearn.model_selection import train_test_split
 
-from ds_models.utils import compute_hash
-from ds_models.waveform.utils import load_waveform, trim_waveform
+from src.waveform.utils import load_waveform, trim_waveform
 from src.training.fine_tuning.dataset import FineTuningDataset
 
 
@@ -34,7 +33,7 @@ class FineTuningDataModule(L.LightningDataModule):
         start_time_column_name: str = 'start_time', 
         end_time_column_name: str = 'end_time',
         filepath_column_name: str = 'source',
-        target_column_name: str = 'phq-binary',
+        target_column_name: str = 'phq_binary',
         train_val_split_name: str = 'train',
         test_split_name: str = 'test',
         # preprocessing
@@ -44,7 +43,6 @@ class FineTuningDataModule(L.LightningDataModule):
         # training
         batch_size: int = 16,
         val_batch_size: int = 16,
-        augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,
     ):
         super().__init__()
 
@@ -69,10 +67,9 @@ class FineTuningDataModule(L.LightningDataModule):
         self.val_size = val_size
         self.train_size = 1 - val_size
 
-        # training
+        # batch sizes
         self.batch_size = batch_size
         self.val_batch_size = val_batch_size
-        self.augmentation = augmentation
 
     def load_df(self) -> pd.DataFrame:
         logger.info(f"Using dataset at {self.dataset_path} with split data at {self.split_df_path}")
@@ -106,7 +103,7 @@ class FineTuningDataModule(L.LightningDataModule):
         df: pd.DataFrame | None = None, 
         train_ids: List[int] | None = None,
         val_ids: List[int] | None = None,
-        random_state: int = 42
+        random_state: int | None = 42
     ):
         if df is None:
             df = self.load_df()
@@ -124,11 +121,26 @@ class FineTuningDataModule(L.LightningDataModule):
             )
 
             # group stratified split for train and val df with random_state
-            train_val_df = df[df[self.split_column_name] == self.test_split_name]
-            train_df = ...
-            val_df = ...
+            train_val_df = df[df[self.split_column_name] == self.train_val_split_name]
+            groups = train_val_df.groupby(self.grouping_column_name).first()
+            
+            train_groups, val_groups = train_test_split(
+                groups.index,
+                test_size=self.val_size,
+                stratify=groups[self.target_column_name],
+                random_state=random_state
+            )
 
-        return train_df, val_df, test_df
+            train_df = train_val_df[train_val_df[self.grouping_column_name].isin(train_groups)]
+            val_df = train_val_df[train_val_df[self.grouping_column_name].isin(val_groups)]
+
+        # log stratification results
+        logger.info(
+            f'Mean target value among splits: '
+            f'train - {train_df[self.target_column_name].mean():.2f}, '
+            f'val - {val_df[self.target_column_name].mean():.2f}, '
+            f'test - {test_df[self.target_column_name].mean():.2f}.'
+        )
 
         # initialize fine-tuning datasets
         self.train_dataset = FineTuningDataset(
@@ -162,20 +174,12 @@ class FineTuningDataModule(L.LightningDataModule):
             f'Test: {len(test_df)} / {n_samples} ({len(test_df) / n_samples: .4f})'
         )
 
-    # def collate_fn(self, batch) -> tuple[list[dict[str, torch.Tensor]], torch.Tensor]:
-    #     texts = [example.texts for example in batch]
-    #     tokenizer_outputs = [
-    #         self.tokenizer(
-    #             sentence,
-    #             truncation=True,
-    #             padding=self.padding,
-    #             return_tensors="pt",
-    #             max_length=self.max_length,
-    #         )
-    #         for sentence in zip(*texts)
-    #     ]
-    #     labels = torch.tensor([example.label for example in batch])
-    #     return tokenizer_outputs, labels
+    def collate_fn(self, batch) -> Tuple[List[Dict[str, torch.Tensor]], torch.Tensor]:
+        # batch must also have labels
+        waveforms: Tuple[torch.Tensor, int] = ...
+        labels: torch.Tensor = ...
+
+        return waveforms, labels
 
     def train_dataloader(self):
         return DataLoader(
