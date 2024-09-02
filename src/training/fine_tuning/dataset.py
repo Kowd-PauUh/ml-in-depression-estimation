@@ -92,8 +92,9 @@ class FineTuningDataset(Dataset):
         self.fast_mode = fast_mode
         self._waveforms = {}
 
+        unique_filepaths_cnt = len(self.df[self.filepath_column_name].unique())
         if self.fast_mode:
-            logger.info('Dataset is initialized in fast mode. All waveforms will be loaded to RAM.')
+            logger.info(f'Dataset is initialized in fast mode. All waveforms {unique_filepaths_cnt} will be loaded to RAM.')
 
             filepaths = self.df[self.filepath_column_name].unique()  # all unique filepaths
             pbar = tqdm(filepaths, desc='Loading waveforms')
@@ -108,7 +109,10 @@ class FineTuningDataset(Dataset):
                 total_size += waveform.element_size() * waveform.nelement()
                 pbar.set_postfix({'files': len(self._waveforms), 'total_size': self.sizeof_fmt(total_size)})
         else:
-            logger.info('Dataset is initialized in RAM-optimised mode. Waveforms will be loaded at each training step.')
+            logger.info(
+                f'Dataset is initialized in RAM-optimised mode. '
+                f'Waveforms ({unique_filepaths_cnt}) will be loaded on-the-fly at each training step.'
+            )
         
     def __len__(self):
         """
