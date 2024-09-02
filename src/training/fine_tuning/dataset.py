@@ -85,7 +85,7 @@ class FineTuningDataset(Dataset):
         -------
         None
         """
-        self.df = df
+        self.df = df.copy().reset_index(drop=True)
         self.filepath_column_name = filepath_column_name
         self.start_time_column_name = start_time_column_name
         self.end_time_column_name = end_time_column_name
