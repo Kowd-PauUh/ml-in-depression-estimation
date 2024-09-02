@@ -1,22 +1,46 @@
+from typing import Tuple
+
+from tqdm.auto import tqdm
 import pandas as pd
 from loguru import logger
 from torch.utils.data import Dataset
-from tqdm.auto import tqdm
+import torch
 
 from src.waveform.utils import load_waveform, trim_waveform
 
 
 class FineTuningDataset(Dataset):
     """
-    HELP
+    A custom Dataset class for fine-tuning models on audio data.
+
+    This class handles the loading and preprocessing of audio waveforms from
+    a pandas DataFrame containing metadata such as file paths, start times, 
+    and end times. Depending on the `fast_mode` flag, it can either load all 
+    waveforms into memory upfront or load them on-the-fly during training.
 
     Attributes
     ----------
-    HELP
+    df : pd.DataFrame
+        DataFrame containing metadata for the audio samples.
+    filepath_column_name : str
+        Name of the column in `df` that contains file paths to the audio files.
+    start_time_column_name : str
+        Name of the column in `df` that contains start times (in seconds) for trimming the audio.
+    end_time_column_name : str
+        Name of the column in `df` that contains end times (in seconds) for trimming the audio.
+    fast_mode : bool
+        If True, all waveforms are loaded into memory during initialization.
+    _waveforms : dict
+        Dictionary storing preloaded waveforms and their sample rates when `fast_mode` is True.
 
     Methods
     -------
-    HELP
+    __len__()
+        Returns the number of samples in the dataset.
+    __getitem__(i)
+        Returns the i-th sample and its sample rate from the dataset.
+    sizeof_fmt(num, suffix="B")
+        Converts a byte size into a human-readable format.
 
     Example
     -------
@@ -37,17 +61,29 @@ class FineTuningDataset(Dataset):
         fast_mode: bool,
     ):
         """
-        Initializes `Dataset` object. If `fast_mode` is True, loads 
-        all the unique waveforms from `df` to `_waveforms` attribute. 
+        Initializes the FineTuningDataset object.
+
+        If `fast_mode` is set to True, all unique waveforms specified in the 
+        DataFrame are preloaded into memory and stored in the `_waveforms` 
+        attribute. Otherwise, waveforms are loaded from disk during each 
+        call to `__getitem__`.
 
         Parameters
         ----------
-        HELP
+        df : pd.DataFrame
+            DataFrame containing metadata for the audio samples.
+        filepath_column_name : str
+            Name of the column in `df` that contains file paths to the audio files.
+        start_time_column_name : str
+            Name of the column in `df` that contains start times (in seconds) for trimming the audio.
+        end_time_column_name : str
+            Name of the column in `df` that contains end times (in seconds) for trimming the audio.
+        fast_mode : bool
+            If True, all waveforms are preloaded into memory.
 
         Returns
         -------
-        Tuple[torch.Tensor, int]
-            Tuple with first element as waveform torch tensor, second - sample rate.
+        None
         """
         self.df = df
         self.filepath_column_name = filepath_column_name
@@ -75,11 +111,34 @@ class FineTuningDataset(Dataset):
             logger.info('Dataset is initialized in RAM-optimised mode. Waveforms will be loaded at each training step.')
         
     def __len__(self):
+        """
+        Returns the number of samples in the dataset.
+
+        Returns
+        -------
+        int
+            Number of samples in the dataset.
+        """
         return len(self.df)
 
-    def __getitem__(self, i):
+    def __getitem__(self, i: int) -> Tuple[torch.Tensor, int]:
         """
-        HELP 
+        Returns the i-th sample from the dataset.
+
+        This method loads the waveform corresponding to the i-th entry 
+        in the DataFrame. If `fast_mode` is enabled, the waveform is 
+        retrieved from memory; otherwise, it is loaded from disk. The 
+        waveform is then trimmed to the specified start and end times.
+
+        Parameters
+        ----------
+        i : int
+            Index of the sample to retrieve.
+
+        Returns
+        -------
+        Tuple[torch.Tensor, int]
+            A tuple containing the waveform as a torch tensor and the sample rate.
         """
         # get information on audio sample
         row = self.df.iloc[i]
@@ -102,8 +161,22 @@ class FineTuningDataset(Dataset):
         return waveform, sr
 
     @staticmethod
-    def sizeof_fmt(num, suffix="B"):
-        # transform bytes number into human readable format
+    def sizeof_fmt(num: int | float, suffix="B") -> str:
+        """
+        Converts a byte size into a human-readable format.
+
+        Parameters
+        ----------
+        num : int
+            The size in bytes.
+        suffix : str, optional
+            The suffix to append to the formatted size (default is "B").
+
+        Returns
+        -------
+        str
+            Human-readable string representation of the size.
+        """
         for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
             if abs(num) < 1024.0:
                 return f"{num:3.1f}{unit}{suffix}"
