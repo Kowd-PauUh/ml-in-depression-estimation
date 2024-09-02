@@ -7,3 +7,4 @@ data/**
 !data/OSR_us_000_0030_8k.wav
 
 *.pkl
+*.zip
