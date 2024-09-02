@@ -31,10 +31,10 @@ class FineTuningDataModule(L.LightningDataModule):
         match_split_df_on: str = 'participant_id',
         grouping_column_name: str = 'participant_id',
         split_column_name: str = 'split',
-        timecode_column_names: List[str] = ['start_time', 'end_time'],
+        start_time_column_name: str = 'start_time', 
+        end_time_column_name: str = 'end_time',
         filepath_column_name: str = 'source',
         target_column_name: str = 'phq-binary',
-        target_variable_type: Literal['binary', 'continuous'] = 'binary',
         train_val_split_name: str = 'train',
         test_split_name: str = 'test',
         # preprocessing
@@ -56,10 +56,10 @@ class FineTuningDataModule(L.LightningDataModule):
         self.match_split_df_on = match_split_df_on
         self.grouping_column_name = grouping_column_name
         self.split_column_name = split_column_name
-        self.timecode_column_names = timecode_column_names
+        self.start_time_column_name = start_time_column_name
+        self.end_time_column_name = end_time_column_name
         self.filepath_column_name = filepath_column_name
         self.target_column_name = target_column_name
-        self.target_variable_type = target_variable_type
         self.train_val_split_name = train_val_split_name
         self.test_split_name = test_split_name
 
