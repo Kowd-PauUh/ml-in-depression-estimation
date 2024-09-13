@@ -90,3 +90,27 @@ def trim_waveform(
     end_idx = int(sample_rate * end_time) if end_time is not None else None
 
     return waveform[:, start_idx:end_idx]
+
+
+def resample_waveform(waveform: torch.Tensor, orig_sample_rate: int, target_sample_rate: int) -> torch.Tensor:
+    """
+    Resamples the waveform to match the target sample rate.
+    
+    Parameters
+    ----------
+    waveform : torch.Tensor
+        The waveform tensor to resample.
+    orig_sample_rate : int
+        The original sample rate of the waveform.
+    target_sample_rate : int
+        The target sample rate to resample to.
+        
+    Returns
+    -------
+    torch.Tensor
+        The resampled waveform.
+    """
+    if orig_sample_rate != target_sample_rate:
+        resampler = torchaudio.transforms.Resample(orig_freq=orig_sample_rate, new_freq=target_sample_rate)
+        waveform = resampler(waveform)
+    return waveform
