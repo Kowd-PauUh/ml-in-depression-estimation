@@ -106,7 +106,7 @@ class FineTuningDataset(Dataset):
 
             for filepath in pbar:
                 # load waveform
-                waveform, sr = load_waveform(audio_path=filepath)
+                waveform, sr = load_waveform(audio_path=filepath, normalize=True)
                 self._waveforms[filepath] = (waveform, sr)
                 
                 # log to progress bar
