@@ -69,6 +69,8 @@ class FineTuningDataModule(L.LightningDataModule):
         self.collate_fn = lambda batch: batch
 
         # batch sizes
+        if batch_size % 2 != 0 or val_batch_size % 2 != 0:
+            raise ValueError(f'Batch sizes must be divisible by two. Got {batch_size=}, {val_batch_size=}.')
         self.batch_size = batch_size
         self.val_batch_size = val_batch_size
 
