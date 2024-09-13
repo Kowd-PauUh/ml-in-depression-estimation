@@ -24,6 +24,10 @@ def load_waveform(
         Tuple where the first element is a waveform (Tensor) and the second is a sample rate.
     """
     waveform, sr = torchaudio.load(audio_path, format=audio_format, normalize=normalize)
+
+    # ensure the output waveform is mono
+    waveform = torch.mean(waveform.to(torch.float32), dim=0, keepdim=True).to(torch.int16)
+    
     return waveform, sr
 
 
