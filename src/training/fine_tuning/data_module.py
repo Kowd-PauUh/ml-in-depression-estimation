@@ -1,7 +1,7 @@
 import os
 import random
 from collections import defaultdict
-from typing import Literal, List
+from typing import Literal, List, Tuple, Dict
 from pathlib import Path
 
 import lightning as L
@@ -33,7 +33,7 @@ class FineTuningDataModule(L.LightningDataModule):
         start_time_column_name: str = 'start_time', 
         end_time_column_name: str = 'end_time',
         filepath_column_name: str = 'source',
-        target_column_name: str = 'phq_binary',
+        target_column_name: Literal['phq_binary', 'phq_score'] = 'phq_binary',
         train_val_split_name: str = 'train',
         test_split_name: str = 'test',
         # preprocessing
@@ -66,6 +66,7 @@ class FineTuningDataModule(L.LightningDataModule):
         self.downsample_to = downsample_to
         self.val_size = val_size
         self.train_size = 1 - val_size
+        self.collate_fn = lambda batch: batch
 
         # batch sizes
         self.batch_size = batch_size
@@ -117,19 +118,27 @@ class FineTuningDataModule(L.LightningDataModule):
             logger.info(
                 f'Setting up {self.__class__.__name__} without specifying train and val indices. '
                 f'Training data will be split into train ad val split with stratification '
-                f'with each group appearing in only one dataset'
+                f'with each group appearing in only one dataset if possible.'
             )
 
             # group stratified split for train and val df with random_state
             train_val_df = df[df[self.split_column_name] == self.train_val_split_name]
             groups = train_val_df.groupby(self.grouping_column_name).first()
             
-            train_groups, val_groups = train_test_split(
-                groups.index,
-                test_size=self.val_size,
-                stratify=groups[self.target_column_name],
-                random_state=random_state
-            )
+            try:
+                train_groups, val_groups = train_test_split(
+                    groups.index,
+                    test_size=self.val_size,
+                    stratify=groups[self.target_column_name],
+                    random_state=random_state
+                )
+            except ValueError:
+                logger.warning('Failed to stratify splits.')
+                train_groups, val_groups = train_test_split(
+                    groups.index,
+                    test_size=self.val_size,
+                    random_state=random_state
+                )
 
             train_df = train_val_df[train_val_df[self.grouping_column_name].isin(train_groups)]
             val_df = train_val_df[train_val_df[self.grouping_column_name].isin(val_groups)]
@@ -146,6 +155,7 @@ class FineTuningDataModule(L.LightningDataModule):
         self.train_dataset = FineTuningDataset(
             df=train_df,
             filepath_column_name=self.filepath_column_name,
+            target_column_name=self.target_column_name,
             start_time_column_name=self.start_time_column_name,
             end_time_column_name=self.end_time_column_name,
             fast_mode=self.fast_mode
@@ -153,6 +163,7 @@ class FineTuningDataModule(L.LightningDataModule):
         self.val_dataset = FineTuningDataset(
             df=val_df,
             filepath_column_name=self.filepath_column_name,
+            target_column_name=self.target_column_name,
             start_time_column_name=self.start_time_column_name,
             end_time_column_name=self.end_time_column_name,
             fast_mode=self.fast_mode
@@ -160,6 +171,7 @@ class FineTuningDataModule(L.LightningDataModule):
         self.test_dataset = FineTuningDataset(
             df=test_df,
             filepath_column_name=self.filepath_column_name,
+            target_column_name=self.target_column_name,
             start_time_column_name=self.start_time_column_name,
             end_time_column_name=self.end_time_column_name,
             fast_mode=self.fast_mode
@@ -173,13 +185,6 @@ class FineTuningDataModule(L.LightningDataModule):
             f'Val: {len(val_df)} / {n_samples} ({len(val_df) / n_samples: .4f})\n'
             f'Test: {len(test_df)} / {n_samples} ({len(test_df) / n_samples: .4f})'
         )
-
-    def collate_fn(self, batch) -> Tuple[List[Dict[str, torch.Tensor]], torch.Tensor]:
-        # batch must also have labels
-        waveforms: Tuple[torch.Tensor, int] = ...
-        labels: torch.Tensor = ...
-
-        return waveforms, labels
 
     def train_dataloader(self):
         return DataLoader(
