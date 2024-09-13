@@ -1,7 +1,13 @@
+import random
+
 import lightning as L
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from loguru import logger
+
+from src.waveform.augmentation import random_resample, random_gain, mixup
+from src.waveform.utils import resample_waveform
+from src.waveform.transformation import mel_spectrogram
 
 
 class FineTuningTrainingModule(L.LightningModule):
@@ -24,6 +30,7 @@ class FineTuningTrainingModule(L.LightningModule):
 
         # training configuration
         self.cnn = cnn
+        self.mel_bins = 
         self.loss = loss
         self.objective = objective
         if self.objective == 'classification':
@@ -65,19 +72,69 @@ class FineTuningTrainingModule(L.LightningModule):
         if self.chunk_strategy not in allowed_chunk_strategies:
             raise ValueError(f'Supported values for `augmentation` are {allowed_chunk_strategies}, got "{self.chunk_strategy}"')
 
-    def preprocess_batch(self, batch: List[Tuple[torch.Tensor, int, float]]):
-        # apply augmentations
+    def preprocess_batch(self, batch: List[Tuple[torch.Tensor, int, float]], eval_mode: bool = True) -> Tuple[torch.Tensor, torch.Tensor]:
+        augmented_batch = []
+
+        # iterate through training examples pairs and apply augmentations
+        augmentation_strength = [None, 'weak', 'moderate', 'strong', 'mixed'].index(self.augmentation)
+        for i in range(0, len(batch), 2):
+            if self.augmentation == 'mixed':
+                # if augmentation strength is "mixed", randomly choose it from four levels
+                augmentation_strength = random.randint(0, 3)
+
+            waveform_1, sr_1, target_value_1 = batch[i]
+            waveform_2, sr_2, target_value_2 = batch[i+1]
+
+            if augmentation_strength > 0:
+                # apply random gain
+                waveform_1 = random_gain(waveform_1)
+                waveform_2 = random_gain(waveform_2)
+            if augmentation_strength > 1:
+                # apply random resample with waveform truncation
+                waveform_1 = random_resample(waveform=waveform_1, orig_sample_rate=sr_1, trim=True)
+                waveform_2 = random_resample(waveform=waveform_2, orig_sample_rate=sr_2, trim=True)
+            if augmentation_strength > 2:
+                # resample waveforms if their original sample rates differ
+                if sr_1 != sr_2:
+                    target_sr = min(sr_1, sr_2)
+                    waveform_1 = resample_waveform(waveform=waveform_1, orig_sample_rate=sr_1, target_sample_rate=target_sr)
+                    waveform_1 = resample_waveform(waveform=waveform_1, orig_sample_rate=sr_1, target_sample_rate=target_sr)
+                    sr_1, sr_2 = target_sr, target_sr
+
+                # apply mixup
+                waveform_1, waveform_2 = mixup(waveform_1, waveform_2)
+
+            augmented_batch += [
+                (waveform_1, sr_1, target_value_1),
+                (waveform_2, sr_2, target_value_2),
+            ]
 
         # calculate MEL spectrograms
+        mel_spectrograms = []
+        for waveform, sample_rate, _ in augmented_batch:
+            mel_spectrograms.append(
+                mel_spectrogram(
+                    waveform=waveform,
+                    sample_rate=sample_rate,
+                    num_mel_bins=self.mel_bins,
+                    length=3072,  # approximately 30s of audio
+                    padding=True,
+                    truncation=True
+                )
+            )
 
-        return batch
+        return torch.cat(mel_spectrograms), torch.tensor([target_value for *_, target_value in augmented_batch]])
 
-    def forward_step(self, batch):
-        X = self.preprocess_batch(batch)
+    def forward_step(self, batch, eval_mode: bool = True):
+        X, y = self.preprocess_batch(batch, eval_mode=eval_mode)
         metrics: dict = {}
 
-        X = self.
-        loss = self.loss(representations)
+        # apply chunking strategy
+
+        # pass input through 
+        X = ...
+
+        loss = self.loss(X)
         return loss, metrics
 
     def store_metrics(self, loss, metrics: Dict[str, int | float], step_name: str, prog_bar: bool = False):
@@ -105,7 +162,7 @@ class FineTuningTrainingModule(L.LightningModule):
             self.log(f'{step_name}_{metric_name}', metric_value, prog_bar=prog_bar)
 
     def training_step(self, batch, _):
-        loss, metrics = self.forward_step(batch)
+        loss, metrics = self.forward_step(batch, eval_mode=False)
         self.store_metrics(loss=loss, metrics=metrics, step_name='train', prog_bar=True)
         return loss
 
