@@ -56,6 +56,7 @@ class FineTuningDataset(Dataset):
         self, 
         df: pd.DataFrame, 
         filepath_column_name: str,
+        target_column_name: str,
         start_time_column_name: str,
         end_time_column_name: str,
         fast_mode: bool,
@@ -74,6 +75,8 @@ class FineTuningDataset(Dataset):
             DataFrame containing metadata for the audio samples.
         filepath_column_name : str
             Name of the column in `df` that contains file paths to the audio files.
+        target_column_name : str
+            Name of the column in `df` that contains target variable value.
         start_time_column_name : str
             Name of the column in `df` that contains start times (in seconds) for trimming the audio.
         end_time_column_name : str
@@ -87,6 +90,7 @@ class FineTuningDataset(Dataset):
         """
         self.df = df.copy().reset_index(drop=True)
         self.filepath_column_name = filepath_column_name
+        self.target_column_name = target_column_name
         self.start_time_column_name = start_time_column_name
         self.end_time_column_name = end_time_column_name
         self.fast_mode = fast_mode
