@@ -125,7 +125,7 @@ class FineTuningDataset(Dataset):
         """
         return len(self.df)
 
-    def __getitem__(self, i: int) -> Tuple[torch.Tensor, int]:
+    def __getitem__(self, i: int) -> Tuple[torch.Tensor, int, float]:
         """
         Returns the i-th sample from the dataset.
 
@@ -141,13 +141,14 @@ class FineTuningDataset(Dataset):
 
         Returns
         -------
-        Tuple[torch.Tensor, int]
-            A tuple containing the waveform as a torch tensor and the sample rate.
+        Tuple[torch.Tensor, int, float]
+            A tuple containing the waveform as a torch tensor, the sample rate and the target value.
         """
         # get information on audio sample
         row = self.df.iloc[i]
         filepath = row[self.filepath_column_name]
         start_time, end_time = row[self.start_time_column_name], row[self.end_time_column_name]
+        target_value = float(row[self.target_column_name])
 
         # load waveform
         if self.fast_mode:
@@ -162,7 +163,7 @@ class FineTuningDataset(Dataset):
             end_time=end_time, 
             sample_rate=sr
         )
-        return waveform, sr
+        return waveform, sr, target_value
 
     @staticmethod
     def sizeof_fmt(num: int | float, suffix="B") -> str:
