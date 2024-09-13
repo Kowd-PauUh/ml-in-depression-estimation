@@ -26,8 +26,10 @@ def load_waveform(
     waveform, sr = torchaudio.load(audio_path, format=audio_format, normalize=normalize)
 
     # ensure the output waveform is mono
-    waveform = torch.mean(waveform.to(torch.float32), dim=0, keepdim=True).to(torch.int16)
-    
+    waveform = torch.mean(waveform.to(torch.float32), dim=0, keepdim=True)
+    if not normalize:
+        waveform = waveform.to(torch.int16)
+
     return waveform, sr
 
 
