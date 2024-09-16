@@ -19,6 +19,7 @@ class FineTuningTrainingModule(L.LightningModule):
         objective: Literal['classification', 'regression'],
         *,
         # waveform operations
+        mel_bins: int = 224,
         augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,
         chunk_strategy: Literal['truncate', 'random', 'mean'] = 'truncate',
         # learning rate
@@ -30,7 +31,7 @@ class FineTuningTrainingModule(L.LightningModule):
 
         # training configuration
         self.cnn = cnn
-        self.mel_bins = 
+        self.mel_bins = mel_bins
         self.loss = loss
         self.objective = objective
         if self.objective == 'classification':
