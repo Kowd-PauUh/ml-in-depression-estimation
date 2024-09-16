@@ -21,7 +21,7 @@ class FineTuningTrainingModule(L.LightningModule):
         # waveform operations
         mel_bins: int = 224,
         augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,
-        chunk_strategy: Literal['truncate', 'random', 'mean'] = 'truncate',
+        chunking_strategy: Literal['truncate', 'random', 'mean'] = 'truncate',
         # learning rate
         lr: float = 3e-5, 
         lr_reduction_factor: float = 0.5,
@@ -41,7 +41,7 @@ class FineTuningTrainingModule(L.LightningModule):
 
         # waveform operations
         self.augmentation = augmentation
-        self.chunk_strategy = chunk_strategy
+        self.chunking_strategy = chunking_strategy
 
         # learning rate
         self.lr = lr
@@ -70,10 +70,10 @@ class FineTuningTrainingModule(L.LightningModule):
             raise ValueError(f'Supported values for `augmentation` are {allowed_augmentations}, got "{self.augmentation}"')
 
         allowed_chunk_strategies = ['truncate', 'random', 'mean']
-        if self.chunk_strategy not in allowed_chunk_strategies:
-            raise ValueError(f'Supported values for `augmentation` are {allowed_chunk_strategies}, got "{self.chunk_strategy}"')
+        if self.chunking_strategy not in allowed_chunk_strategies:
+            raise ValueError(f'Supported values for `augmentation` are {allowed_chunk_strategies}, got "{self.chunking_strategy}"')
 
-    def preprocess_batch(self, batch: List[Tuple[torch.Tensor, int, float]], eval_mode: bool = True) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _apply_augmentation(self, batch: List[Tuple[torch.Tensor, int, float]]) -> List[Tuple[torch.Tensor, int, float]]:
         augmented_batch = []
 
         # iterate through training examples pairs and apply augmentations
@@ -110,9 +110,12 @@ class FineTuningTrainingModule(L.LightningModule):
                 (waveform_2, sr_2, target_value_2),
             ]
 
+        return augmented_batch
+
+    def _calculate_mel_spectrograms(self, batch: List[Tuple[torch.Tensor, int, float]]) -> List[torch.Tensor]:
         # calculate MEL spectrograms
         mel_spectrograms = []
-        for waveform, sample_rate, _ in augmented_batch:
+        for waveform, sample_rate, _ in batch:
             mel_spectrograms.append(
                 mel_spectrogram(
                     waveform=waveform,
@@ -123,11 +126,35 @@ class FineTuningTrainingModule(L.LightningModule):
                     truncation=True
                 )
             )
+        
+        return mel_spectrograms
+
+    def preprocess_batch(self, batch: List[Tuple[torch.Tensor, int, float]], eval_mode: bool = True) -> Tuple[torch.Tensor, torch.Tensor]:
+        # apply augmentation in training mode
+        if not eval_mode:
+            augmented_batch = self._apply_augmentation(batch)
+
+        # calculate MEL spectrograms
+        mel_spectrograms = self._calculate_mel_spectrograms(batch)
 
         return torch.cat(mel_spectrograms), torch.tensor([target_value for *_, target_value in augmented_batch]])
 
+    def forward(self, X: torch.Tensor):  # ? idk what's the best input. Already preprocessed tensor or list of unprocessed tensors
+        if self.chunking_strategy == 'truncate':
+            raise NotImplementedError
+        elif self.chunking_strategy == 'random':
+            raise NotImplementedError
+        elif self.chunking_strategy == 'mean':
+            raise NotImplementedError
+        else:
+            raise ValueError(f'Unsupported chunking strategy "{self.chunking_strategy}"')
+
+        return self.cnn(X)
+
     def forward_step(self, batch, eval_mode: bool = True):
         X, y = self.preprocess_batch(batch, eval_mode=eval_mode)
+        pred = self(X)
+
         metrics: dict = {}
 
         # apply chunking strategy
