@@ -60,4 +60,4 @@ def mel_spectrogram(
         if truncation and p < 0:
             fbank = fbank[0:length, :]
 
-    return fbank
+    return fbank.T
