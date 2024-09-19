@@ -75,44 +75,47 @@ class FineTuningTrainingModule(L.LightningModule):
         self._validate_init()
 
     def _replace_last_layer(self):
-        """Replace the final layer of the CNN to output a single value."""
-        # For models with a classifier attribute (e.g., VGG, AlexNet)
+        # models with a sequentional layer (e.g., VGG, AlexNet)
         if hasattr(self.cnn, 'classifier') and isinstance(self.cnn.classifier, nn.Sequential):
-            # Find the last linear layer in the classifier
+            # find the last linear layer in the classifier
             for idx in reversed(range(len(self.cnn.classifier))):
                 layer = self.cnn.classifier[idx]
+
+                # models with linear classifiers
                 if isinstance(layer, nn.Linear):
                     in_features = layer.in_features
-                    # Replace the last linear layer
+
+                    # replace the last linear layer
                     self.cnn.classifier[idx] = nn.Linear(in_features, 1)
-                    # Remove any layers after the replaced linear layer
+
+                    # remove any layers after the replaced linear layer
                     if idx < len(self.cnn.classifier) - 1:
                         self.cnn.classifier = nn.Sequential(*self.cnn.classifier[:idx+1])
                     break
+
+                # models with convolutional classifiers
+                elif isinstance(layer, nn.Conv2d):
+                    in_channels = layer.in_channels
+
+                    # replace the last Conv2d layer
+                    self.cnn.classifier[idx] = nn.Conv2d(in_channels, 1, kernel_size=1)
+
+                    # remove any layers after the replaced Conv2d layer
+                    if idx < len(self.cnn.classifier) - 1:
+                        self.cnn.classifier = nn.Sequential(*self.cnn.classifier[:idx+1])
+                    break
+
             else:
-                raise ValueError("No linear layer found in cnn.classifier.")
+                raise ValueError("Neither linear nor Conv2d layer found in self.cnn.classifier.")
+
+        # models with a linear layer (e.g., Densenet)
+        elif hasattr(self.cnn, 'classifier') and isinstance(self.cnn.classifier, nn.Linear):
+            self.cnn.classifier = nn.Linear(self.cnn.classifier.in_features, 1)
         
-        # For models with a fully connected layer named 'fc' (e.g., ResNet)
+        # models with a fully connected layer (e.g., ResNet)
         elif hasattr(self.cnn, 'fc') and isinstance(self.cnn.fc, nn.Linear):
             in_features = self.cnn.fc.in_features
             self.cnn.fc = nn.Linear(in_features, 1)
-        
-        # For models that use convolutional classifiers (e.g., SqueezeNet)
-        elif hasattr(self.cnn, 'classifier') and isinstance(self.cnn.classifier, nn.Sequential):
-            # Find the last Conv2d layer in the classifier
-            for idx in reversed(range(len(self.cnn.classifier))):
-                layer = self.cnn.classifier[idx]
-                if isinstance(layer, nn.Conv2d):
-                    in_channels = layer.in_channels
-                    # Replace the last Conv2d layer
-                    self.cnn.classifier[idx] = nn.Conv2d(in_channels, 1, kernel_size=1)
-                    # Remove any layers after the replaced Conv2d layer
-                    if idx < len(self.cnn.classifier) - 1:
-                        self.cnn.classifier = nn.Sequential(*self.cnn.classifier[:idx+1])
-                    break
-            else:
-                raise ValueError("No Conv2d layer found in cnn.classifier.")
-        
         else:
             raise ValueError(f"Unsupported CNN architecture: {type(self.cnn)}")
 
