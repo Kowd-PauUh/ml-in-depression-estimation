@@ -1,12 +1,14 @@
 import random
 from typing import Dict, List, Tuple, Literal
 
-import lightning as L
 import torch
 from torch import optim
 from torch import nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torchvision import models
 import torchmetrics
+import lightning as L
+
 from loguru import logger
 
 from src.waveform.augmentation import random_resample, random_gain, mixup
@@ -70,9 +72,29 @@ class FineTuningTrainingModule(L.LightningModule):
             for step_name in ['train', 'val', 'test']:
                 setattr(self, f'_{step_name}_{metric_name}_vector', [])
 
-        self.validate_init()
+        self._validate_init()
 
-    def validate_init(self):
+    def _replace_last_layer(self):
+        if isinstance(self.cnn, models.SqueezeNet):
+            self.cnn.classifier[1] = nn.Conv2d(
+                self.cnn.classifier[1].in_channels, 1, 
+                kernel_size=(1, 1), stride=(1, 1)
+            )
+            self.cnn.num_classes = 1
+        elif isinstance(self.cnn, (
+                models.ShuffleNetV2, models.MobileNetV2, models.MobileNetV3, 
+                models.MNASNet, models.EfficientNet, models.AlexNet, models.VGG
+            )
+        ):
+            self.cnn.classifier[-1] = nn.Linear(self.cnn.classifier[-1].in_features, 1)
+        elif isinstance(self.cnn, models.DenseNet):
+            self.cnn.classifier = nn.Linear(self.cnn.classifier.in_features, 1)
+        elif isinstance(self.cnn, (models.ResNet, models.ResNeXt, models.Wide_ResNet, models.Inception3)):
+            self.cnn.fc = nn.Linear(self.cnn.fc.in_features, 1)
+        else:
+            raise ValueError("Unsupported CNN architecture")
+
+    def _validate_init(self):
         allowed_objectives = ['classification', 'regression']
         if self.objective not in allowed_objectives:
             raise ValueError(
