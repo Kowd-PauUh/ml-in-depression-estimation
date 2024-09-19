@@ -309,7 +309,7 @@ class FineTuningTrainingModule(L.LightningModule):
         """
         # log loss and store its value
         getattr(self, f'_{step_name}_loss_vector').append(loss.cpu().detach())
-        self.log('{step_name}_loss', loss, prog_bar=prog_bar)
+        self.log(f'{step_name}_loss', loss, prog_bar=prog_bar)
 
         # log metrics and store their values
         for metric_name, metric_value in metrics.items():
