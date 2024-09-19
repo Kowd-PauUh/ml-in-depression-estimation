@@ -1,7 +1,9 @@
 import random
+from typing import Dict, List, Tuple, Literal
 
 import lightning as L
-import torch.optim as optim
+import torch
+from torch import optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torchmetrics
 from loguru import logger
@@ -9,7 +11,6 @@ from loguru import logger
 from src.waveform.augmentation import random_resample, random_gain, mixup
 from src.waveform.utils import resample_waveform
 from src.waveform.transformation import mel_spectrogram
-
 from src.training.utils import repeat_tensor, truncate_or_pad, get_random_chunk
 
 
@@ -17,8 +18,8 @@ class FineTuningTrainingModule(L.LightningModule):
     def __init__(
         self,
         # training configuration
-        cnn, 
-        loss, 
+        cnn,
+        loss,
         objective: Literal['classification', 'regression'],
         *,
         # waveform operations
@@ -26,7 +27,7 @@ class FineTuningTrainingModule(L.LightningModule):
         augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,
         chunking_strategy: Literal['truncate', 'random', 'mean'] = 'truncate',
         # learning rate
-        lr: float = 3e-5, 
+        lr: float = 3e-5,
         lr_reduction_factor: float = 0.5,
         lr_patience: int = 3
     ):
@@ -66,21 +67,35 @@ class FineTuningTrainingModule(L.LightningModule):
     def validate_init(self):
         allowed_objectives = ['classification', 'regression']
         if self.objective not in allowed_objectives:
-            raise ValueError(f'Supported values for `objective` are {allowed_objectives}, got "{self.objective}"')
+            raise ValueError(
+                f'Supported values for `objective` are '
+                f'{allowed_objectives}, got "{self.objective}"'
+            )
 
         allowed_augmentations = [None, 'weak', 'moderate', 'strong', 'mixed']
         if self.augmentation not in allowed_augmentations:
-            raise ValueError(f'Supported values for `augmentation` are {allowed_augmentations}, got "{self.augmentation}"')
+            raise ValueError(
+                f'Supported values for `augmentation` are '
+                f'{allowed_augmentations}, got "{self.augmentation}"'
+            )
 
         allowed_chunk_strategies = ['truncate', 'random', 'mean']
         if self.chunking_strategy not in allowed_chunk_strategies:
-            raise ValueError(f'Supported values for `augmentation` are {allowed_chunk_strategies}, got "{self.chunking_strategy}"')
+            raise ValueError(
+                f'Supported values for `augmentation` are '
+                f'{allowed_chunk_strategies}, got "{self.chunking_strategy}"'
+            )
 
-    def _apply_augmentation(self, waveforms: List[Tuple[torch.Tensor, int]]) -> List[Tuple[torch.Tensor, int]]:
+    def _apply_augmentation(
+        self,
+        waveforms: List[Tuple[torch.Tensor, int]]
+    ) -> List[Tuple[torch.Tensor, int]]:
         augmented_waveforms = []
 
         # iterate through training examples pairs and apply augmentations
-        augmentation_strength = [None, 'weak', 'moderate', 'strong', 'mixed'].index(self.augmentation)
+        augmentation_strength = [
+            None, 'weak', 'moderate', 'strong', 'mixed'
+        ].index(self.augmentation)
         for i in range(0, len(waveforms), 2):
             if self.augmentation == 'mixed':
                 # if augmentation strength is "mixed", randomly choose it from four levels
@@ -101,8 +116,16 @@ class FineTuningTrainingModule(L.LightningModule):
                 # resample waveforms if their original sample rates differ
                 if sr_1 != sr_2:
                     target_sr = min(sr_1, sr_2)
-                    waveform_1 = resample_waveform(waveform=waveform_1, orig_sample_rate=sr_1, target_sample_rate=target_sr)
-                    waveform_1 = resample_waveform(waveform=waveform_1, orig_sample_rate=sr_1, target_sample_rate=target_sr)
+                    waveform_1 = resample_waveform(
+                        waveform=waveform_1,
+                        orig_sample_rate=sr_1,
+                        target_sample_rate=target_sr
+                    )
+                    waveform_1 = resample_waveform(
+                        waveform=waveform_1,
+                        orig_sample_rate=sr_1,
+                        target_sample_rate=target_sr
+                    )
                     sr_1, sr_2 = target_sr, target_sr
 
                 # apply mixup
@@ -115,7 +138,10 @@ class FineTuningTrainingModule(L.LightningModule):
 
         return augmented_waveforms
 
-    def _calculate_mel_spectrograms(self, waveforms: List[Tuple[torch.Tensor, int]]) -> List[torch.Tensor]:
+    def _calculate_mel_spectrograms(
+        self,
+        waveforms: List[Tuple[torch.Tensor, int]]
+    ) -> List[torch.Tensor]:
         # calculate MEL spectrograms
         mel_spectrograms = []
         for waveform, sample_rate in waveforms:
@@ -129,7 +155,7 @@ class FineTuningTrainingModule(L.LightningModule):
                     truncation=True
                 )
             )
-        
+
         return mel_spectrograms
 
     def _forward_pass(self, X: torch.Tensor):
@@ -175,7 +201,7 @@ class FineTuningTrainingModule(L.LightningModule):
             raise ValueError(f'Unsupported chunking strategy "{self.chunking_strategy}"')
 
         mel_spectrograms = torch.cat(mel_spectrograms)
-        return self._forward_pass(X)
+        return self._forward_pass(mel_spectrograms)
 
     def forward_step(self, batch, eval_mode: bool = True):
         waveforms = [(w, sr) for w, sr, _ in batch]
@@ -188,7 +214,13 @@ class FineTuningTrainingModule(L.LightningModule):
         loss = self.loss(pred, y)
         return loss, metrics
 
-    def store_metrics(self, loss, metrics: Dict[str, int | float], step_name: str, prog_bar: bool = False):
+    def store_metrics(
+        self,
+        loss,
+        metrics: Dict[str, int | float],
+        step_name: str,
+        prog_bar: bool = False
+    ):
         """
         Logs loss and metrics and stors them into `_{step_name}_{metric_name}_vector` attribute.
 
@@ -218,11 +250,11 @@ class FineTuningTrainingModule(L.LightningModule):
         return loss
 
     def validation_step(self, batch, _):
-        loss = self.forward_step(batch)
+        loss, metrics = self.forward_step(batch)
         self.store_metrics(loss=loss, metrics=metrics, step_name='val', prog_bar=True)
 
     def test_step(self, batch, _):
-        loss = self.forward_step(batch)
+        loss, metrics = self.forward_step(batch)
         self.store_metrics(loss=loss, metrics=metrics, step_name='test')
 
     def configure_optimizers(self):
