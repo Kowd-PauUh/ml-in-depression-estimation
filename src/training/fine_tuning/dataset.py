@@ -53,8 +53,8 @@ class FineTuningDataset(Dataset):
     ... )
     """
     def __init__(
-        self, 
-        df: pd.DataFrame, 
+        self,
+        df: pd.DataFrame,
         filepath_column_name: str,
         target_column_name: str,
         start_time_column_name: str,
@@ -78,9 +78,11 @@ class FineTuningDataset(Dataset):
         target_column_name : str
             Name of the column in `df` that contains target variable value.
         start_time_column_name : str
-            Name of the column in `df` that contains start times (in seconds) for trimming the audio.
+            Name of the column in `df` that contains start 
+            times (in seconds) for trimming the audio.
         end_time_column_name : str
-            Name of the column in `df` that contains end times (in seconds) for trimming the audio.
+            Name of the column in `df` that contains end 
+            times (in seconds) for trimming the audio.
         fast_mode : bool
             If True, all waveforms are preloaded into memory.
 
@@ -98,7 +100,10 @@ class FineTuningDataset(Dataset):
 
         unique_filepaths_cnt = len(self.df[self.filepath_column_name].unique())
         if self.fast_mode:
-            logger.info(f'Dataset is initialized in fast mode. All waveforms {unique_filepaths_cnt} will be loaded to RAM.')
+            logger.info(
+                f'Dataset is initialized in fast mode. All waveforms '
+                f'{unique_filepaths_cnt} will be loaded to RAM.'
+            )
 
             filepaths = self.df[self.filepath_column_name].unique()  # all unique filepaths
             pbar = tqdm(filepaths, desc='Loading waveforms')
@@ -108,16 +113,22 @@ class FineTuningDataset(Dataset):
                 # load waveform
                 waveform, sr = load_waveform(audio_path=filepath, normalize=True)
                 self._waveforms[filepath] = (waveform, sr)
-                
+
                 # log to progress bar
                 total_size += waveform.element_size() * waveform.nelement()
-                pbar.set_postfix({'files': len(self._waveforms), 'total_size': self.sizeof_fmt(total_size)})
+                pbar.set_postfix(
+                    {
+                        'files': len(self._waveforms), 
+                        'total_size': self.sizeof_fmt(total_size)
+                    }
+                )
         else:
             logger.info(
                 f'Dataset is initialized in RAM-optimised mode. '
-                f'Waveforms ({unique_filepaths_cnt}) will be loaded on-the-fly at each training step.'
+                f'Waveforms ({unique_filepaths_cnt}) '
+                f'will be loaded on-the-fly at each training step.'
             )
-        
+
     def __len__(self):
         """
         Returns the number of samples in the dataset.
@@ -162,9 +173,9 @@ class FineTuningDataset(Dataset):
 
         # trim waveform into audio sample
         waveform = trim_waveform(
-            waveform=waveform, 
-            start_time=start_time, 
-            end_time=end_time, 
+            waveform=waveform,
+            start_time=start_time,
+            end_time=end_time,
             sample_rate=sr
         )
         return waveform, sr, target_value
