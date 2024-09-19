@@ -3,11 +3,14 @@ import random
 import lightning as L
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+import torchmetrics
 from loguru import logger
 
 from src.waveform.augmentation import random_resample, random_gain, mixup
 from src.waveform.utils import resample_waveform
 from src.waveform.transformation import mel_spectrogram
+
+from src.training.utils import repeat_tensor, truncate_or_pad, get_random_chunk
 
 
 class FineTuningTrainingModule(L.LightningModule):
@@ -73,18 +76,18 @@ class FineTuningTrainingModule(L.LightningModule):
         if self.chunking_strategy not in allowed_chunk_strategies:
             raise ValueError(f'Supported values for `augmentation` are {allowed_chunk_strategies}, got "{self.chunking_strategy}"')
 
-    def _apply_augmentation(self, batch: List[Tuple[torch.Tensor, int, float]]) -> List[Tuple[torch.Tensor, int, float]]:
-        augmented_batch = []
+    def _apply_augmentation(self, waveforms: List[Tuple[torch.Tensor, int]]) -> List[Tuple[torch.Tensor, int]]:
+        augmented_waveforms = []
 
         # iterate through training examples pairs and apply augmentations
         augmentation_strength = [None, 'weak', 'moderate', 'strong', 'mixed'].index(self.augmentation)
-        for i in range(0, len(batch), 2):
+        for i in range(0, len(waveforms), 2):
             if self.augmentation == 'mixed':
                 # if augmentation strength is "mixed", randomly choose it from four levels
                 augmentation_strength = random.randint(0, 3)
 
-            waveform_1, sr_1, target_value_1 = batch[i]
-            waveform_2, sr_2, target_value_2 = batch[i+1]
+            waveform_1, sr_1 = waveforms[i]
+            waveform_2, sr_2 = waveforms[i+1]
 
             if augmentation_strength > 0:
                 # apply random gain
@@ -105,17 +108,17 @@ class FineTuningTrainingModule(L.LightningModule):
                 # apply mixup
                 waveform_1, waveform_2 = mixup(waveform_1, waveform_2)
 
-            augmented_batch += [
-                (waveform_1, sr_1, target_value_1),
-                (waveform_2, sr_2, target_value_2),
+            augmented_waveforms += [
+                (waveform_1, sr_1),
+                (waveform_2, sr_2),
             ]
 
-        return augmented_batch
+        return augmented_waveforms
 
-    def _calculate_mel_spectrograms(self, batch: List[Tuple[torch.Tensor, int, float]]) -> List[torch.Tensor]:
+    def _calculate_mel_spectrograms(self, waveforms: List[Tuple[torch.Tensor, int]]) -> List[torch.Tensor]:
         # calculate MEL spectrograms
         mel_spectrograms = []
-        for waveform, sample_rate, _ in batch:
+        for waveform, sample_rate in waveforms:
             mel_spectrograms.append(
                 mel_spectrogram(
                     waveform=waveform,
@@ -129,40 +132,60 @@ class FineTuningTrainingModule(L.LightningModule):
         
         return mel_spectrograms
 
-    def preprocess_batch(self, batch: List[Tuple[torch.Tensor, int, float]], eval_mode: bool = True) -> Tuple[torch.Tensor, torch.Tensor]:
-        # apply augmentation in training mode
+    def _forward_pass(self, X: torch.Tensor):
+        if X.shape[2] != X.shape[3]:
+            raise ValueError(
+                f'{self.__class__.__name__}._forward_pass can only take '
+                f'tensors of same length and width. Got {X.shape = }'
+            )
+        return self.cnn(X)
+
+    def _forward_pass_with_scores_averaging(self, X: torch.Tensor):
+        # implementation goes here
+        pass
+
+    def forward(self, waveforms: List[Tuple[torch.Tensor, int]], eval_mode: bool = True):
+        if eval_mode and self.chunking_strategy == 'random':
+            raise ValueError('Random chunking is forbidden in inference mode.')
+
+        # apply aumentations during training
         if not eval_mode:
-            augmented_batch = self._apply_augmentation(batch)
+            waveforms = self._apply_augmentation(waveforms)
 
         # calculate MEL spectrograms
-        mel_spectrograms = self._calculate_mel_spectrograms(batch)
+        mel_spectrograms = self._calculate_mel_spectrograms(waveforms)
 
-        return torch.cat(mel_spectrograms), torch.tensor([target_value for *_, target_value in augmented_batch]])
+        # forward pass with scores averaging
+        if self.chunking_strategy == 'mean':
+            mel_spectrograms = torch.cat(mel_spectrograms)
+            return self._forward_pass_with_scores_averaging(mel_spectrograms)
 
-    def forward(self, X: torch.Tensor):  # ? idk what's the best input. Already preprocessed tensor or list of unprocessed tensors
+        # forward pass with truncation
         if self.chunking_strategy == 'truncate':
-            raise NotImplementedError
+            mel_spectrograms = [
+                repeat_tensor(truncate_or_pad(tensor=t, max_length=self.mel_bins))
+                for t in mel_spectrograms
+            ]
         elif self.chunking_strategy == 'random':
-            raise NotImplementedError
-        elif self.chunking_strategy == 'mean':
-            raise NotImplementedError
+            mel_spectrograms = [
+                repeat_tensor(get_random_chunk(tensor=t, chunk_length=self.mel_bins))
+                for t in mel_spectrograms
+            ]
         else:
             raise ValueError(f'Unsupported chunking strategy "{self.chunking_strategy}"')
 
-        return self.cnn(X)
+        mel_spectrograms = torch.cat(mel_spectrograms)
+        return self._forward_pass(X)
 
     def forward_step(self, batch, eval_mode: bool = True):
-        X, y = self.preprocess_batch(batch, eval_mode=eval_mode)
-        pred = self(X)
+        waveforms = [(w, sr) for w, sr, _ in batch]
+        y = torch.tensor([target_value for *_, target_value in batch])
+
+        # feed waveforms through model
+        pred = self(waveforms=waveforms, eval_mode=eval_mode)
 
         metrics: dict = {}
-
-        # apply chunking strategy
-
-        # pass input through 
-        X = ...
-
-        loss = self.loss(X)
+        loss = self.loss(pred, y)
         return loss, metrics
 
     def store_metrics(self, loss, metrics: Dict[str, int | float], step_name: str, prog_bar: bool = False):
