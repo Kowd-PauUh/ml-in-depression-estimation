@@ -232,8 +232,7 @@ class FineTuningTrainingModule(L.LightningModule):
         return self.cnn(X)
 
     def _forward_pass_with_scores_averaging(self, X: torch.Tensor):
-        # implementation goes here
-        pass
+        raise NotImplementedError()
 
     def forward(self, waveforms: List[Tuple[torch.Tensor, int]], eval_mode: bool = True):
         if eval_mode and self.chunking_strategy == 'random':
