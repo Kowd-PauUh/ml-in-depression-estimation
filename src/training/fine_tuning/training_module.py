@@ -75,56 +75,29 @@ class FineTuningTrainingModule(L.LightningModule):
         self._validate_init()
 
     def _replace_last_layer(self):
-        def replace_conv_layer(classifier, in_channels, out_channels=1):
-            """Replaces the last Conv2d layer in a Sequential classifier with specified out_channels."""
-            classifier[1] = nn.Conv2d(in_channels, out_channels, kernel_size=(1, 1), stride=(1, 1))
-            return classifier[:2] if len(classifier) > 2 and isinstance(classifier[2], nn.ReLU) else classifier
+        """Replace the final layer of the CNN to output a single value. Apply sigmoid if classification."""
+        # For classification models with a classifier attribute (e.g., VGG, AlexNet)
+        if hasattr(self.cnn, 'classifier') and isinstance(self.cnn.classifier, nn.Sequential):
+            # Get the input features from the last layer
+            if isinstance(self.cnn.classifier[-1], nn.Linear):
+                in_features = self.cnn.classifier[-1].in_features
+                # Replace the last layer
+                self.cnn.classifier[-1] = nn.Linear(in_features, 1)
+            else:
+                raise ValueError(f'"{type(self.cnn)}" doesn\'t end with nn.Linear layer. Unable to replace.')
 
-        def replace_linear_layer(classifier, in_features, out_features=1):
-            """Replaces the last Linear layer in a Sequential classifier with specified out_features."""
-            classifier[-1] = nn.Linear(in_features, out_features)
-            return classifier
+        # For models with a fully connected layer named 'fc' (e.g., ResNet)
+        elif hasattr(self.cnn, 'fc') and isinstance(self.cnn.fc, nn.Linear):
+            in_features = self.cnn.fc.in_features
+            self.cnn.fc = nn.Linear(in_features, 1)
 
-        def add_sigmoid(classifier):
-            """Appends a Sigmoid activation to a Sequential classifier."""
-            return nn.Sequential(*classifier, nn.Sigmoid())
+        # For models that use convolutional classifiers (e.g., SqueezeNet)
+        elif hasattr(self.cnn, 'classifier') and isinstance(self.cnn.classifier, nn.Conv2d):
+            in_channels = self.cnn.classifier.in_channels
+            self.cnn.classifier = nn.Conv2d(in_channels, 1, kernel_size=1)
 
-        if isinstance(self.cnn, models.SqueezeNet):
-            self.cnn.classifier = replace_conv_layer(
-                classifier=self.cnn.classifier, 
-                in_channels=self.cnn.classifier[1].in_channels
-            )
-        elif isinstance(
-            self.cnn, 
-            (
-                models.ShuffleNetV2, models.MobileNetV2, models.MobileNetV3,
-                models.MNASNet, models.EfficientNet, models.AlexNet, models.VGG
-            )
-        ):
-            self.cnn.classifier = replace_linear_layer(
-                classifier=self.cnn.classifier, 
-                in_features=self.cnn.classifier[-1].in_features
-            )
-        elif isinstance(self.cnn, models.DenseNet):
-            self.cnn.classifier = nn.Linear(self.cnn.classifier.in_features, 1)
-        elif isinstance(
-            self.cnn, 
-            (models.ResNet, models.ResNeXt, models.Wide_ResNet, models.Inception3)
-        ):
-            self.cnn.fc = nn.Linear(self.cnn.fc.in_features, 1)
         else:
-            raise ValueError("Unsupported CNN architecture")
-
-        # Add sigmoid activation if classification objective
-        if self.objective == 'classification':
-            if isinstance(self.cnn, (models.SqueezeNet, models.ShuffleNetV2, models.MobileNetV2,
-                                    models.MobileNetV3, models.MNASNet, models.EfficientNet,
-                                    models.AlexNet, models.VGG)):
-                self.cnn.classifier = add_sigmoid(self.cnn.classifier)
-            elif isinstance(self.cnn, models.DenseNet):
-                self.cnn.classifier = nn.Sequential(self.cnn.classifier, nn.Sigmoid())
-            elif isinstance(self.cnn, (models.ResNet, models.ResNeXt, models.Wide_ResNet, models.Inception3)):
-                self.cnn.fc = nn.Sequential(self.cnn.fc, nn.Sigmoid())
+            raise ValueError(f'Unsupported CNN architecture: {type(self.cnn)}'')
 
     def _validate_init(self):
         allowed_objectives = ['classification', 'regression']
