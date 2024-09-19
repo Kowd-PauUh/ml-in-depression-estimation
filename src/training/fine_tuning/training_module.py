@@ -148,7 +148,7 @@ class FineTuningTrainingModule(L.LightningModule):
             f'Training {self.cnn.__class__.__name__} with {self.objective} objective '
             f'(mel_bins = {self.mel_bins}, augmentation = {self.augmentation}, '
             f'chunking_strategy = {self.chunking_strategy}, lr = {self.lr}, '
-            f'lr_reduction_factor = {self.lr_reduction_factor}, lr_patience = {self.lr_patience}'
+            f'lr_reduction_factor = {self.lr_reduction_factor}, lr_patience = {self.lr_patience})'
         )
 
     def _apply_augmentation(
