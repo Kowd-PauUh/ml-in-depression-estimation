@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple, Literal
 import lightning as L
 import torch
 from torch import optim
+from torch import nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torchmetrics
 from loguru import logger
@@ -19,7 +20,6 @@ class FineTuningTrainingModule(L.LightningModule):
         self,
         # training configuration
         cnn,
-        loss,
         objective: Literal['classification', 'regression'],
         *,
         # waveform operations
@@ -36,12 +36,20 @@ class FineTuningTrainingModule(L.LightningModule):
         # training configuration
         self.cnn = cnn
         self.mel_bins = mel_bins
-        self.loss = loss
         self.objective = objective
         if self.objective == 'classification':
-            self.metrics_fns: dict = {}
+            self.loss_fn = nn.BCEWithLogitsLoss()
+            self.metrics_fns = {
+                'f2': torchmetrics.FBeta(num_classes=1, beta=2.0, average='binary'),
+                'precision': torchmetrics.Precision(num_classes=1, average='binary'),
+                'recall': torchmetrics.Recall(num_classes=1, average='binary')
+            }
         elif self.objective == 'regression':
-            self.metrics_fns: dict = {}
+            self.loss_fn = nn.MSELoss()
+            self.metrics_fns = {
+                'mae': torchmetrics.MeanAbsoluteError(),
+                'r2': torchmetrics.R2Score()
+            }
 
         # waveform operations
         self.augmentation = augmentation
@@ -207,11 +215,15 @@ class FineTuningTrainingModule(L.LightningModule):
         waveforms = [(w, sr) for w, sr, _ in batch]
         y = torch.tensor([target_value for *_, target_value in batch])
 
-        # feed waveforms through model
+        # feed waveforms through model and calculate loss
         pred = self(waveforms=waveforms, eval_mode=eval_mode)
+        loss = self.loss_fn(pred, y)
 
+        # calculate metrics
         metrics: dict = {}
-        loss = self.loss(pred, y)
+        for metric_name, metric_fn in self.metrics_fns.items():
+            metrics[metric_name] = metric_fn(pred, y)
+
         return loss, metrics
 
     def store_metrics(
