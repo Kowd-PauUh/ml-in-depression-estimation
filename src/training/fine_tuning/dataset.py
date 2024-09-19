@@ -169,7 +169,7 @@ class FineTuningDataset(Dataset):
         if self.fast_mode:
             waveform, sr = self._waveforms[filepath]
         else:
-            waveform, sr = load_waveform(audio_path=filepath)
+            waveform, sr = load_waveform(audio_path=filepath, normalize=True)
 
         # trim waveform into audio sample
         waveform = trim_waveform(
