@@ -37,7 +37,7 @@ class FineTuningTrainingModule(L.LightningModule):
 
         # prepare CNN for regression / binary classification objective
         self.cnn = cnn
-        self._replace_last_cnn_layer()  
+        self._replace_last_cnn_layer()
 
         # training configuration
         self.mel_bins = mel_bins
@@ -45,9 +45,9 @@ class FineTuningTrainingModule(L.LightningModule):
         if self.objective == 'classification':
             self.loss_fn = nn.BCEWithLogitsLoss()
             self.metrics_fns = {
-                'f2': torchmetrics.FBeta(num_classes=1, beta=2.0, average='binary'),
-                'precision': torchmetrics.Precision(num_classes=1, average='binary'),
-                'recall': torchmetrics.Recall(num_classes=1, average='binary')
+                'f2': torchmetrics.classification.BinaryFBetaScore(beta=2.0),
+                'precision': torchmetrics.classification.BinaryPrecision(),
+                'recall': torchmetrics.classification.BinaryRecall()
             }
         elif self.objective == 'regression':
             self.loss_fn = nn.MSELoss()
@@ -97,7 +97,7 @@ class FineTuningTrainingModule(L.LightningModule):
                     break
 
                 # models with convolutional classifiers
-                elif isinstance(layer, nn.Conv2d):
+                if isinstance(layer, nn.Conv2d):
                     in_channels = layer.in_channels
 
                     # replace the last Conv2d layer
@@ -114,7 +114,7 @@ class FineTuningTrainingModule(L.LightningModule):
         # models with a linear layer (e.g., Densenet)
         elif hasattr(self.cnn, 'classifier') and isinstance(self.cnn.classifier, nn.Linear):
             self.cnn.classifier = nn.Linear(self.cnn.classifier.in_features, 1)
-        
+
         # models with a fully connected layer (e.g., ResNet)
         elif hasattr(self.cnn, 'fc') and isinstance(self.cnn.fc, nn.Linear):
             in_features = self.cnn.fc.in_features
@@ -268,6 +268,10 @@ class FineTuningTrainingModule(L.LightningModule):
         # feed waveforms through model and calculate loss
         pred = self(waveforms=waveforms, eval_mode=eval_mode)
         loss = self.loss_fn(pred, y)
+
+        # apply sigmoid for classification metrics computation
+        if self.objective == 'classification':
+            pred = torch.sigmoid(pred)
 
         # calculate metrics
         metrics: dict = {}
