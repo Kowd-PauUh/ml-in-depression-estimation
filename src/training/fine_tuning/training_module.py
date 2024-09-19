@@ -247,7 +247,7 @@ class FineTuningTrainingModule(L.LightningModule):
 
         # forward pass with scores averaging
         if self.chunking_strategy == 'mean':
-            mel_spectrograms = torch.cat(mel_spectrograms)
+            mel_spectrograms = torch.stack(mel_spectrograms, dim=0)
             return self._forward_pass_with_scores_averaging(mel_spectrograms)
 
         # forward pass with truncation
@@ -264,7 +264,7 @@ class FineTuningTrainingModule(L.LightningModule):
         else:
             raise ValueError(f'Unsupported chunking strategy "{self.chunking_strategy}"')
 
-        mel_spectrograms = torch.cat(mel_spectrograms)
+        mel_spectrograms = torch.stack(mel_spectrograms, dim=0)
         return self._forward_pass(mel_spectrograms)
 
     def forward_step(self, batch, eval_mode: bool = True):
@@ -272,7 +272,7 @@ class FineTuningTrainingModule(L.LightningModule):
         y = torch.tensor([target_value for *_, target_value in batch])
 
         # feed waveforms through model and calculate loss
-        pred = self(waveforms=waveforms, eval_mode=eval_mode)
+        pred = self(waveforms=waveforms, eval_mode=eval_mode).squeeze()
         loss = self.loss_fn(pred, y)
 
         # apply sigmoid for classification metrics computation
