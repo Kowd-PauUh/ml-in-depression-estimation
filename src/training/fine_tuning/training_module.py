@@ -75,24 +75,56 @@ class FineTuningTrainingModule(L.LightningModule):
         self._validate_init()
 
     def _replace_last_layer(self):
+        def replace_conv_layer(classifier, in_channels, out_channels=1):
+            """Replaces the last Conv2d layer in a Sequential classifier with specified out_channels."""
+            classifier[1] = nn.Conv2d(in_channels, out_channels, kernel_size=(1, 1), stride=(1, 1))
+            return classifier[:2] if len(classifier) > 2 and isinstance(classifier[2], nn.ReLU) else classifier
+
+        def replace_linear_layer(classifier, in_features, out_features=1):
+            """Replaces the last Linear layer in a Sequential classifier with specified out_features."""
+            classifier[-1] = nn.Linear(in_features, out_features)
+            return classifier
+
+        def add_sigmoid(classifier):
+            """Appends a Sigmoid activation to a Sequential classifier."""
+            return nn.Sequential(*classifier, nn.Sigmoid())
+
         if isinstance(self.cnn, models.SqueezeNet):
-            self.cnn.classifier[1] = nn.Conv2d(
-                self.cnn.classifier[1].in_channels, 1, 
-                kernel_size=(1, 1), stride=(1, 1)
+            self.cnn.classifier = replace_conv_layer(
+                classifier=self.cnn.classifier, 
+                in_channels=self.cnn.classifier[1].in_channels
             )
-            self.cnn.num_classes = 1
-        elif isinstance(self.cnn, (
-                models.ShuffleNetV2, models.MobileNetV2, models.MobileNetV3, 
+        elif isinstance(
+            self.cnn, 
+            (
+                models.ShuffleNetV2, models.MobileNetV2, models.MobileNetV3,
                 models.MNASNet, models.EfficientNet, models.AlexNet, models.VGG
             )
         ):
-            self.cnn.classifier[-1] = nn.Linear(self.cnn.classifier[-1].in_features, 1)
+            self.cnn.classifier = replace_linear_layer(
+                classifier=self.cnn.classifier, 
+                in_features=self.cnn.classifier[-1].in_features
+            )
         elif isinstance(self.cnn, models.DenseNet):
             self.cnn.classifier = nn.Linear(self.cnn.classifier.in_features, 1)
-        elif isinstance(self.cnn, (models.ResNet, models.ResNeXt, models.Wide_ResNet, models.Inception3)):
+        elif isinstance(
+            self.cnn, 
+            (models.ResNet, models.ResNeXt, models.Wide_ResNet, models.Inception3)
+        ):
             self.cnn.fc = nn.Linear(self.cnn.fc.in_features, 1)
         else:
             raise ValueError("Unsupported CNN architecture")
+
+        # Add sigmoid activation if classification objective
+        if self.objective == 'classification':
+            if isinstance(self.cnn, (models.SqueezeNet, models.ShuffleNetV2, models.MobileNetV2,
+                                    models.MobileNetV3, models.MNASNet, models.EfficientNet,
+                                    models.AlexNet, models.VGG)):
+                self.cnn.classifier = add_sigmoid(self.cnn.classifier)
+            elif isinstance(self.cnn, models.DenseNet):
+                self.cnn.classifier = nn.Sequential(self.cnn.classifier, nn.Sigmoid())
+            elif isinstance(self.cnn, (models.ResNet, models.ResNeXt, models.Wide_ResNet, models.Inception3)):
+                self.cnn.fc = nn.Sequential(self.cnn.fc, nn.Sigmoid())
 
     def _validate_init(self):
         allowed_objectives = ['classification', 'regression']
