@@ -113,7 +113,8 @@ class FineTuningDataModule(L.LightningDataModule):
         df: pd.DataFrame | None = None,
         train_ids: List[int] | None = None,
         val_ids: List[int] | None = None,
-        random_state: int | None = 42
+        random_state: int | None = 42,
+        stage: str | None = None
     ):
         if df is None:
             df = self.load_df()
