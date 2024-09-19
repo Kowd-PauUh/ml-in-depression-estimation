@@ -1,17 +1,13 @@
 import os
-import random
-from collections import defaultdict
-from typing import Literal, List, Tuple, Dict
+from typing import Literal, List
 from pathlib import Path
 
 import lightning as L
 import pandas as pd
-import torch
 from loguru import logger
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 
-from src.waveform.utils import load_waveform, trim_waveform
 from src.training.fine_tuning.dataset import FineTuningDataset
 
 
@@ -26,11 +22,11 @@ class FineTuningDataModule(L.LightningDataModule):
         # files location
         dataset_path: str | Path = PREPROCESSED_DATA_PATH / 'data.csv',
         split_df_path: str | Path = PREPROCESSED_DATA_PATH / 'split.csv',
-        # datasets parameters 
+        # datasets parameters
         match_split_df_on: str = 'participant_id',
         grouping_column_name: str = 'participant_id',
         split_column_name: str = 'split',
-        start_time_column_name: str = 'start_time', 
+        start_time_column_name: str = 'start_time',
         end_time_column_name: str = 'end_time',
         filepath_column_name: str = 'source',
         target_column_name: Literal['phq_binary', 'phq_score'] = 'phq_binary',
@@ -70,7 +66,10 @@ class FineTuningDataModule(L.LightningDataModule):
 
         # batch sizes
         if batch_size % 2 != 0 or val_batch_size % 2 != 0:
-            raise ValueError(f'Batch sizes must be divisible by two. Got {batch_size=}, {val_batch_size=}.')
+            raise ValueError(
+                f'Batch sizes must be divisible by two. '
+                f'Got {batch_size=}, {val_batch_size=}.'
+            )
         self.batch_size = batch_size
         self.val_batch_size = val_batch_size
 
@@ -90,20 +89,28 @@ class FineTuningDataModule(L.LightningDataModule):
 
         # assign split to each row in dataframe
         split_df = pd.read_csv(self.split_df_path).set_index(self.match_split_df_on)
-        df[self.split_column_name] = df[self.match_split_df_on].apply(lambda i: split_df.loc[i][self.split_column_name])
+        df[self.split_column_name] = df[self.match_split_df_on].apply(
+            lambda i: split_df.loc[i][self.split_column_name]
+        )
         available_splits = list(split_df[self.split_column_name].unique())
 
         # validate split names
         if self.train_val_split_name not in available_splits:
-            raise ValueError(f'Trying to use {self.train_val_split_name=} but vailable splits are: {available_splits}')
+            raise ValueError(
+                f'Trying to use {self.train_val_split_name=} but '
+                f'available splits are: {available_splits}'
+            )
         if self.test_split_name not in available_splits:
-            raise ValueError(f'Trying to use {self.test_split_name=} but vailable splits are: {available_splits}')
+            raise ValueError(
+                f'Trying to use {self.test_split_name=} but '
+                f'available splits are: {available_splits}'
+            )
 
         return df
 
     def setup(
-        self, 
-        df: pd.DataFrame | None = None, 
+        self,
+        df: pd.DataFrame | None = None,
         train_ids: List[int] | None = None,
         val_ids: List[int] | None = None,
         random_state: int | None = 42
@@ -126,7 +133,7 @@ class FineTuningDataModule(L.LightningDataModule):
             # group stratified split for train and val df with random_state
             train_val_df = df[df[self.split_column_name] == self.train_val_split_name]
             groups = train_val_df.groupby(self.grouping_column_name).first()
-            
+
             try:
                 train_groups, val_groups = train_test_split(
                     groups.index,
@@ -199,9 +206,9 @@ class FineTuningDataModule(L.LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(
-            self.val_dataset, 
-            batch_size=self.val_batch_size, 
-            collate_fn=self.collate_fn, 
+            self.val_dataset,
+            batch_size=self.val_batch_size,
+            collate_fn=self.collate_fn,
             drop_last=True
         )
 
