@@ -120,7 +120,7 @@ class FineTuningTrainingModule(L.LightningModule):
             in_features = self.cnn.fc.in_features
             self.cnn.fc = nn.Linear(in_features, 1)
         else:
-            raise ValueError(f"Unsupported CNN architecture: {type(self.cnn)}")
+            raise ValueError(f"Unsupported CNN architecture: {self.cnn.__class__}")
 
     def _validate_init(self):
         allowed_objectives = ['classification', 'regression']
@@ -143,6 +143,13 @@ class FineTuningTrainingModule(L.LightningModule):
                 f'Supported values for `augmentation` are '
                 f'{allowed_chunk_strategies}, got "{self.chunking_strategy}"'
             )
+
+        logger.info(
+            f'Training {self.cnn.__class__} with {self.objective} objective '
+            f'(mel_bins = {self.mel_bins}, augmentation = {self.augmentation}, '
+            f'chunking_strategy = {self.chunking_strategy}, lr = {self.lr}, '
+            f'lr_reduction_factor = {self.lr_reduction_factor}, lr_patience = {self.lr_patience}'
+        )
 
     def _apply_augmentation(
         self,
