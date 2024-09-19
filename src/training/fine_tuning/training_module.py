@@ -35,8 +35,11 @@ class FineTuningTrainingModule(L.LightningModule):
     ):
         super().__init__()
 
-        # training configuration
+        # prepare CNN for regression / binary classification objective
         self.cnn = cnn
+        self._replace_last_cnn_layer()  
+
+        # training configuration
         self.mel_bins = mel_bins
         self.objective = objective
         if self.objective == 'classification':
@@ -74,7 +77,7 @@ class FineTuningTrainingModule(L.LightningModule):
 
         self._validate_init()
 
-    def _replace_last_layer(self):
+    def _replace_last_cnn_layer(self):
         # models with a sequentional layer (e.g., VGG, AlexNet)
         if hasattr(self.cnn, 'classifier') and isinstance(self.cnn.classifier, nn.Sequential):
             # find the last linear layer in the classifier
