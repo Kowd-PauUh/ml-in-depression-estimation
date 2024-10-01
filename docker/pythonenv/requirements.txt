@@ -11,14 +11,20 @@ seaborn
 # modelling
 torch
 lightning
-
-# audio processing
 torchaudio
 torchvision
-librosa
+torchmetrics
 
-# features extraction
+# training
+tensorboard
+tensorboardX
+
+# co2 emission monitoring
+codecarbon==2.6.0
+
+# acoustic features extraction
 git+https://gitlab.com/Kowd-PauUh/disvoice.git
+librosa
 
 # other
 fire
