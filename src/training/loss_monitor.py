@@ -19,8 +19,8 @@ class LossMonitor(L.Callback):
         if not self.average_train_loss:
             _df['epoch'] = _df['epoch'] / trainer.num_training_batches
         else:
-             _df['epoch'] += 1
-             df['epoch'] += 1
+            _df['epoch'] += 1
+            df['epoch'] += 1
 
         sns.lineplot(
             data=_df, 
