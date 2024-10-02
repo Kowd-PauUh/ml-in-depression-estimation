@@ -15,18 +15,16 @@ class LossMonitor(L.Callback):
         df = pd.read_csv(f"{log_dir}/metrics.csv")
 
         # plot train loss
+        df['epoch'] += 1
         _df = df[~df['train_loss'].isna()].copy()
         if not self.average_train_loss:
-            _df['epoch'] = _df['epoch'] / trainer.num_training_batches
-        else:
-            _df['epoch'] += 1
-            df['epoch'] += 1
+            _df['step'] = _df['step'] / trainer.num_training_batches
 
         sns.lineplot(
             data=_df, 
-            x='epoch', 
+            x='epoch' if self.average_train_loss else 'step', 
             y='train_loss', 
-            marker='o', 
+            marker='o' if self.average_train_loss else None, 
             label='train_loss'
         )
 
