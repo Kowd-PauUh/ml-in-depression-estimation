@@ -1,9 +1,11 @@
 import os
+from typing import Literal
 from pathlib import Path
 
 import lightning as L
 from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
+import fire
 
 from src.training.foundation_models import FOUNDATION_MODELS
 from src.training.fine_tuning.training_module import FineTuningTrainingModule
@@ -17,19 +19,22 @@ MODELS_DIR = Path(os.environ.get("MODELS_DIR", "models"))
 
 def fine_tune_cnn(
     cnn,
-    objective,
-    max_epochs,
-    min_epochs,
-    test=True,
-    ram_optimized_mode=True,
-    mel_bins=224,
-    augmentation=None,
-    chunking_strategy='truncate',
-    lr_reduction_factor=0.5,
-    lr=1e-5,
-    patience=3,
-    batch_size = 2,
+    objective: Literal['classification', 'regression'],
+    evaluate_on_test_split: bool = True,
+    # dataset
+    ram_optimized_mode: bool = True,
     downsample_to: int | None = None,
+    # spectrogram
+    mel_bins: int = 224,
+    augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,
+    chunking_strategy: Literal['truncate', 'random', 'mean'] = 'truncate',
+    # training
+    max_epochs: int = 10,
+    min_epochs: int = 1,
+    lr_reduction_factor: float = 0.5,
+    lr: float = 1e-5,
+    patience: int = 3,
+    batch_size: int = 2,
     max_grad_norm: float = 1.0,
     **kwargs
 ):
@@ -93,5 +98,30 @@ def fine_tune_cnn(
     trainer.fit(module, data_module)
 
     # testing
-    if test:
+    if evaluate_on_test_split:
         trainer.test(module, data_module)
+
+
+def get_model(model_name, pretrained):
+    for size_category in FOUNDATION_MODELS.values():
+        if model_name in size_category:
+            return size_category[model_name](pretrained=pretrained)
+            
+    raise ValueError(f'Model "{model_name}" is not supported')
+
+
+def main(
+    model_name: str,
+    objective: str,
+    pretrained: bool = True,
+    **kwargs
+):
+    cnn = get_model(model_name, pretrained)
+    fine_tune_cnn(
+        cnn=cnn,
+        objective=objective,
+        **kwargs
+    )
+
+if __name__ == "__main__":
+    fire.Fire(main)
