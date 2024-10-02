@@ -240,6 +240,32 @@ class FineTuningTrainingModule(L.LightningModule):
     def _forward_pass_with_scores_averaging(self, X: torch.Tensor):
         raise NotImplementedError()
 
+    # def _forward_pass_with_scores_averaging(self, X: torch.Tensor):
+    #     batch_size, channels, height, width = X.shape
+
+    #     # Determine the number of chunks
+    #     chunk_size = self.mel_bins
+    #     num_chunks = height // chunk_size
+
+    #     # Drop the last part if height and width don't match perfectly
+    #     if height % chunk_size != 0:
+    #         X = X[:, :, :num_chunks * chunk_size, :num_chunks * chunk_size]
+
+    #     # Create chunks
+    #     chunks = X.unfold(2, chunk_size, chunk_size).unfold(3, chunk_size, chunk_size)
+    #     chunks = chunks.contiguous().view(batch_size * num_chunks * num_chunks, channels, chunk_size, chunk_size)
+
+    #     # Forward pass through the CNN
+    #     scores = self.cnn(chunks)
+
+    #     # Reshape scores back to (batch_size, num_chunks * num_chunks, -1)
+    #     scores = scores.view(batch_size, num_chunks * num_chunks, -1)
+
+    #     # Average the scores across the chunks
+    #     averaged_scores = scores.mean(dim=1)
+
+    #     return averaged_scores
+
     def forward(self, waveforms: List[Tuple[torch.Tensor, int]], eval_mode: bool = True):
         if eval_mode and self.chunking_strategy == 'random':
             raise ValueError('Random chunking is forbidden in inference mode.')
