@@ -33,6 +33,7 @@ def fine_tune_cnn(
     max_epochs: int = 10,
     min_epochs: int = 1,
     lr_reduction_factor: float = 0.5,
+    lr_patience: int = 3,
     lr: float = 1e-5,
     patience: int = 3,
     batch_size: int = 2,
@@ -55,7 +56,16 @@ def fine_tune_cnn(
     ).replace('.', '_').replace('=', '_')
 
     # modules
-    module = FineTuningTrainingModule(cnn=cnn, objective=objective)
+    module = FineTuningTrainingModule(
+        cnn=cnn, 
+        objective=objective,
+        mel_bins=mel_bins,
+        augmentation=augmentation,
+        chunking_strategy=chunking_strategy,
+        lr=lr,
+        lr_reduction_factor=lr_reduction_factor,
+        lr_patience=lr_patience
+    )
     data_module = FineTuningDataModule(
         target_column_name=target_column_name,
         downsample_to=downsample_to, 
@@ -99,6 +109,7 @@ def fine_tune_cnn(
         'max_epochs': max_epochs,
         'min_epochs': min_epochs,
         'lr_reduction_factor': lr_reduction_factor,
+        'lr_patience': lr_patience,
         'lr': lr,
         'patience': patience,
         'batch_size': batch_size,
