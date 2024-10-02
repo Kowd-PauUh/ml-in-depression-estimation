@@ -1,6 +1,7 @@
 import os
 from typing import Literal
 from pathlib import Path
+import json
 
 import lightning as L
 from lightning.pytorch.loggers import CSVLogger
@@ -45,7 +46,7 @@ def fine_tune_cnn(
     else:
         raise ValueError(
             f'Supported values for `objective` are '
-            f'["classification", "regression"], got "{self.objective}"'
+            f'["classification", "regression"], got "{objective}"'
         )
 
     model_name = (
@@ -84,6 +85,30 @@ def fine_tune_cnn(
     co2_monitor = CO2Monitor()
     loss_monitor = LossMonitor()
 
+    # save training hyperparams
+    train_hparams = {
+        'cnn': cnn.__class__.__name__,
+        'objective': objective,
+        'evaluate_on_test_split': evaluate_on_test_split,
+        'ram_optimized_mode': ram_optimized_mode,
+        'downsample_to': downsample_to,
+        'mel_bins': mel_bins,
+        'augmentation': augmentation,
+        'chunking_strategy': chunking_strategy,
+        'max_epochs': max_epochs,
+        'min_epochs': min_epochs,
+        'lr_reduction_factor': lr_reduction_factor,
+        'lr': lr,
+        'patience': patience,
+        'batch_size': batch_size,
+        'max_grad_norm': max_grad_norm,
+        **kwargs
+    }
+    Path(csv_logger.log_dir).mkdir(parents=True, exist_ok=True)
+    train_hparams_path = Path(csv_logger.log_dir) / 'train_hparams.json'
+    with open(train_hparams_path, 'w') as f:
+        json.dump(train_hparams, f, indent=4)
+
     # training
     trainer = L.Trainer(
         max_epochs=max_epochs,
@@ -95,7 +120,13 @@ def fine_tune_cnn(
         gradient_clip_val=max_grad_norm,
         **kwargs,
     )
-    trainer.fit(module, data_module)
+
+    try:
+        trainer.fit(module, data_module)
+    except Exception as e:
+        # create empty file named "failure" on exception
+        open(Path(csv_logger.log_dir) / 'failure', 'a').close()
+        raise e
 
     # testing
     if evaluate_on_test_split:
@@ -106,7 +137,7 @@ def get_model(model_name, pretrained):
     for size_category in FOUNDATION_MODELS.values():
         if model_name in size_category:
             return size_category[model_name](pretrained=pretrained)
-            
+
     raise ValueError(f'Model "{model_name}" is not supported')
 
 
