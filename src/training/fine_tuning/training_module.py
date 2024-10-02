@@ -144,6 +144,12 @@ class FineTuningTrainingModule(L.LightningModule):
                 f'{allowed_chunk_strategies}, got "{self.chunking_strategy}"'
             )
 
+        # save hyperparams
+        self.save_hyperparameters(
+            'objective', 'mel_bins', 
+            'augmentation', 'chunking_strategy', 
+            'lr', 'lr_reduction_factor', 'lr_patience'
+        )
         logger.info(
             f'Training {self.cnn.__class__.__name__} with {self.objective} objective '
             f'(mel_bins = {self.mel_bins}, augmentation = {self.augmentation}, '
