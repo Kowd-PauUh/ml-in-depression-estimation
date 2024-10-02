@@ -15,7 +15,7 @@ from src.training.co2_monitor import CO2Monitor
 from src.training.loss_monitor import LossMonitor
 
 
-MODELS_DIR = Path(os.environ.get("MODELS_DIR", "models"))
+MODELS_DIR = Path(os.environ.get("MODELS_DIR", "models")) / 'fine_tuning'
 
 
 def fine_tune_cnn(
@@ -65,7 +65,7 @@ def fine_tune_cnn(
     )
 
     # loggers
-    csv_logger = CSVLogger(save_dir=MODELS_DIR/model_name, name=None)
+    csv_logger = CSVLogger(save_dir=MODELS_DIR / model_name, name=None)
 
     # callbacks
     early_stopping = EarlyStopping(
@@ -87,6 +87,7 @@ def fine_tune_cnn(
 
     # save training hyperparams
     train_hparams = {
+        'task': 'fine-tuning',
         'cnn': cnn.__class__.__name__,
         'objective': objective,
         'evaluate_on_test_split': evaluate_on_test_split,
@@ -133,7 +134,7 @@ def fine_tune_cnn(
         trainer.test(module, data_module)
 
 
-def get_model(model_name, pretrained):
+def get_model(model_name: str, pretrained: bool):
     for size_category in FOUNDATION_MODELS.values():
         if model_name in size_category:
             return size_category[model_name](pretrained=pretrained)
