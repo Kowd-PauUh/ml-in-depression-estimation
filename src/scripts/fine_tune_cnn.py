@@ -3,6 +3,7 @@ from typing import Literal
 from pathlib import Path
 import json
 
+import torch
 import lightning as L
 from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
@@ -16,6 +17,7 @@ from src.training.loss_monitor import LossMonitor
 
 
 MODELS_DIR = Path(os.environ.get("MODELS_DIR", "models")) / 'fine_tuning'
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 def fine_tune_cnn(
@@ -65,7 +67,7 @@ def fine_tune_cnn(
         lr=lr,
         lr_reduction_factor=lr_reduction_factor,
         lr_patience=lr_patience
-    )
+    ).to(DEVICE)
     data_module = FineTuningDataModule(
         target_column_name=target_column_name,
         downsample_to=downsample_to, 
