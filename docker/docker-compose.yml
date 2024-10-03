@@ -8,7 +8,15 @@ services:
                 PROJECT_DIR: ${PROJECT_DIR}
         environment:
             - "PROJECT_DIR=${PROJECT_DIR}"
+            - "MODELS_DIR=${PROJECT_DIR}/data/models"
         ports:
             - "8501:8000"  # jupyter port
         volumes:
             - ${PROJECT_DIR}:${PROJECT_DIR}
+        deploy:
+            resources:
+                reservations:
+                    devices:
+                        - driver: nvidia
+                          count: all
+                          capabilities: [gpu]
