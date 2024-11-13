@@ -19,6 +19,9 @@ torchmetrics
 tensorboard
 tensorboardX
 
+# tracking
+mlflow
+
 # co2 emission monitoring
 codecarbon==2.6.0
 
