@@ -27,7 +27,7 @@ class LossMonitor(L.Callback):
             x='epoch' if self.average_train_loss else 'step', 
             y='train_loss_step', 
             marker='o' if self.average_train_loss else None, 
-            label='train_loss_step'
+            label='train_loss'
         )
 
         # plot val loss
@@ -36,7 +36,7 @@ class LossMonitor(L.Callback):
             x='epoch', 
             y='val_loss_step', 
             marker='o', 
-            label='val_loss_step'
+            label='val_loss'
         )
 
         # save plot
