@@ -1,4 +1,5 @@
 import os
+import sys
 from typing import Literal
 from pathlib import Path
 import json
@@ -8,6 +9,8 @@ import lightning as L
 from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
 import fire
+import mlflow
+import pandas as pd
 
 from src.training.foundation_models import FOUNDATION_MODELS
 from src.training.fine_tuning.training_module import FineTuningTrainingModule
@@ -16,8 +19,12 @@ from src.training.co2_monitor import CO2Monitor
 from src.training.loss_monitor import LossMonitor
 
 
-MODELS_DIR = Path(os.environ.get("MODELS_DIR", "models")) / 'fine_tuning'
+EXPERIMENT_NAME = 'CNN fine-tuning'
+PROJECT_DIR = Path(os.environ['PROJECT_DIR'])
+MODELS_DIR = Path(os.environ.get("MODELS_DIR", PROJECT_DIR/ "data/models")) / 'fine_tuning'
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+mlflow.set_tracking_uri(os.environ['MLFLOW_TRACKING_URI'])
 
 
 def fine_tune_cnn(
@@ -40,8 +47,8 @@ def fine_tune_cnn(
     lr: float = 1e-5,
     min_delta: float = 1e-3,
     patience: int = 3,
-    batch_size: int = 2,
-    tags: dict = {}
+    batch_size: int = 32,
+    tags: dict = {},
     **kwargs
 ):
     if objective == 'classification':
@@ -57,7 +64,7 @@ def fine_tune_cnn(
     model_name = f'{cnn.__class__.__name__}/{objective}'
 
     # modules
-    module = FineTuningTrainingModule(
+    model = FineTuningTrainingModule(
         cnn=cnn, 
         objective=objective,
         mel_bins=mel_bins,
@@ -66,7 +73,7 @@ def fine_tune_cnn(
         eval_chunking_strategy=eval_chunking_strategy,
         lr=lr,
         lr_reduction_factor=lr_reduction_factor,
-        lr_patience=lr_patience
+        lr_patience=lr_patience,
     ).to(DEVICE)
     data_module = FineTuningDataModule(
         target_column_name=target_column_name,
@@ -125,7 +132,17 @@ def fine_tune_cnn(
     with open(train_hparams_path, 'w') as f:
         json.dump(train_hparams, f, indent=4)
 
-    # training
+    # save script execution command
+    execution_command_path = Path(csv_logger.log_dir) / 'command.txt'
+    with open(execution_command_path, 'w') as f:
+        f.write(' '.join(sys.argv))
+
+    # save model signature
+    model_signature_path = Path(csv_logger.log_dir) / 'model_signature.txt'
+    with open(model_signature_path, 'w') as f:
+        f.write(str(model))
+
+    # trainer
     trainer = L.Trainer(
         max_epochs=max_epochs,
         min_epochs=min_epochs,
@@ -136,16 +153,66 @@ def fine_tune_cnn(
         **kwargs,
     )
 
+    # mlflow run setup
+    mlflow.pytorch.autolog(
+        log_every_n_step=1,
+        checkpoint_save_weights_only=True,
+    )
+    if mlflow.get_experiment_by_name(EXPERIMENT_NAME) is None:
+        mlflow.create_experiment(EXPERIMENT_NAME)
+    mlflow.set_experiment(EXPERIMENT_NAME)
+    mlflow.start_run(
+        run_name=model_name, 
+        tags={
+            'cnn': cnn.__class__.__name__,
+            'objective': objective,
+            'augmentation': str(augmentation),
+            'train_chunking_strategy': train_chunking_strategy,
+            'eval_chunking_strategy': eval_chunking_strategy,
+            **tags
+        }
+    )
+
+    # log hyperparams and dataset info
+    mlflow.log_params(train_hparams)
+    for context, data_source in [
+        ('Labelled dataset', data_module.dataset_path), 
+        ('Split dataset', data_module.split_df_path)
+    ]:
+        if isinstance(data_source, Path):
+            data_source = data_source.as_posix()
+            
+        dataset_tags = {'local_dataset_path': data_source, 'type': context}
+        mlflow.log_input(
+            dataset=mlflow.data.from_pandas(
+                df=pd.read_csv(data_source),
+                source=mlflow.data.dataset_source.DatasetSource.from_dict(dataset_tags),
+                name=Path(data_source).stem,
+            ),
+            context=context,
+            tags=dataset_tags,
+        )
+
     try:
-        trainer.fit(module, data_module)
+        # training
+        trainer.fit(model, data_module)
+
+        # testing
+        if evaluate_on_test_split:
+            trainer.test(model, data_module)
+
+        # log artifacts
+        mlflow.log_artifact(model_signature_path)
+        mlflow.log_artifact(execution_command_path)
+        mlflow.log_artifact(co2_monitor.artifact_path)
+        mlflow.log_artifact(loss_monitor.artifact_path)
+        mlflow.log_artifact(train_hparams_path.as_posix())
+        mlflow.log_artifact(Path(csv_logger.log_dir, 'metrics.csv').as_posix())
+
     except Exception as e:
         # create empty file named "failure" on exception
         open(Path(csv_logger.log_dir) / 'failure', 'a').close()
         raise e
-
-    # testing
-    if evaluate_on_test_split:
-        trainer.test(module, data_module)
 
 
 def get_model(model_name: str, pretrained: bool):
@@ -168,7 +235,7 @@ def main(
         objective=objective,
         tags={
             'model_name': model_name,
-            'pretrained': pretrained,
+            'pretrained': str(pretrained),
         },
         **kwargs
     )
