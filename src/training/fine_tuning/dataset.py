@@ -6,7 +6,7 @@ from loguru import logger
 from torch.utils.data import Dataset
 import torch
 
-from src.waveform.utils import load_waveform, trim_waveform
+from src.waveform.utils import load_waveform, trim_waveform, resample_waveform
 
 
 class FineTuningDataset(Dataset):
@@ -60,6 +60,7 @@ class FineTuningDataset(Dataset):
         start_time_column_name: str,
         end_time_column_name: str,
         fast_mode: bool,
+        target_sr: int | None = 16000,
     ):
         """
         Initializes the FineTuningDataset object.
@@ -85,6 +86,9 @@ class FineTuningDataset(Dataset):
             times (in seconds) for trimming the audio.
         fast_mode : bool
             If True, all waveforms are preloaded into memory.
+        target_sr : int or None, optional
+            Sample rate to resample all waveforms to. 
+            If "None" no resampling is applied. Defaults to 16000.
 
         Returns
         -------
@@ -96,6 +100,7 @@ class FineTuningDataset(Dataset):
         self.start_time_column_name = start_time_column_name
         self.end_time_column_name = end_time_column_name
         self.fast_mode = fast_mode
+        self.target_sr = target_sr
         self._waveforms = {}
 
         unique_filepaths_cnt = len(self.df[self.filepath_column_name].unique())
@@ -112,6 +117,16 @@ class FineTuningDataset(Dataset):
             for filepath in pbar:
                 # load waveform
                 waveform, sr = load_waveform(audio_path=filepath, normalize=True)
+
+                # resample if needed
+                if self.target_sr is not None:
+                    waveform = resample_waveform(
+                        waveform=waveform,
+                        orig_sample_rate=sr,
+                        target_sample_rate=self.target_sr
+                    )
+                    sr = self.target_sr
+
                 self._waveforms[filepath] = (waveform, sr)
 
                 # log to progress bar
