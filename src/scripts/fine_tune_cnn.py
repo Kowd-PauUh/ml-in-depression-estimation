@@ -166,7 +166,7 @@ def fine_tune_cnn(
             experiment_name=EXPERIMENT_NAME,
             run_id=mlflow.active_run().info.run_id
         )
-    )  # this is a workaround for logging epochs
+    )  # this is a workaround for epochs logging
 
     # trainer
     trainer = L.Trainer(
