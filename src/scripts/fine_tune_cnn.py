@@ -6,7 +6,7 @@ import json
 
 import torch
 import lightning as L
-from lightning.pytorch.loggers import CSVLogger
+from lightning.pytorch.loggers import CSVLogger, MLFlowLogger
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
 import fire
 import mlflow
@@ -142,22 +142,7 @@ def fine_tune_cnn(
     with open(model_signature_path, 'w') as f:
         f.write(str(model))
 
-    # trainer
-    trainer = L.Trainer(
-        max_epochs=max_epochs,
-        min_epochs=min_epochs,
-        callbacks=[early_stopping, model_checkpoint, lr_monitor, co2_monitor, loss_monitor],
-        logger=[csv_logger],
-        default_root_dir=model_name,
-        log_every_n_steps=1,
-        **kwargs,
-    )
-
-    # mlflow run setup
-    mlflow.pytorch.autolog(
-        log_every_n_step=1,
-        checkpoint_save_weights_only=True,
-    )
+    # mlflow run and logger setup
     if mlflow.get_experiment_by_name(EXPERIMENT_NAME) is None:
         mlflow.create_experiment(EXPERIMENT_NAME)
     mlflow.set_experiment(EXPERIMENT_NAME)
@@ -172,6 +157,21 @@ def fine_tune_cnn(
             **tags
         }
     )
+    mlflow_logger = MLFlowLogger(
+        experiment_name=EXPERIMENT_NAME,
+        run_id=mlflow.active_run().info.run_id
+    )
+
+    # trainer
+    trainer = L.Trainer(
+        max_epochs=max_epochs,
+        min_epochs=min_epochs,
+        callbacks=[early_stopping, model_checkpoint, lr_monitor, co2_monitor, loss_monitor],
+        logger=[csv_logger, mlflow_logger],
+        default_root_dir=model_name,
+        log_every_n_steps=1,
+        **kwargs,
+    )
 
     # log hyperparams and dataset info
     mlflow.log_params(train_hparams)
@@ -181,7 +181,7 @@ def fine_tune_cnn(
     ]:
         if isinstance(data_source, Path):
             data_source = data_source.as_posix()
-            
+
         dataset_tags = {'local_dataset_path': data_source, 'type': context}
         mlflow.log_input(
             dataset=mlflow.data.from_pandas(
