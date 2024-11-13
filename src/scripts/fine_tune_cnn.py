@@ -30,16 +30,18 @@ def fine_tune_cnn(
     # spectrogram
     mel_bins: int = 224,
     augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,
-    chunking_strategy: Literal['truncate', 'random', 'mean'] = 'truncate',
+    train_chunking_strategy: Literal['truncate', 'random', 'mean'] = 'truncate',
+    eval_chunking_strategy: Literal['truncate', 'mean'] = 'truncate',
     # training
     max_epochs: int = 10,
     min_epochs: int = 1,
     lr_reduction_factor: float = 0.5,
     lr_patience: int = 3,
     lr: float = 1e-5,
+    min_delta: float = 1e-3,
     patience: int = 3,
     batch_size: int = 2,
-    max_grad_norm: float = 1.0,
+    tags: dict = {}
     **kwargs
 ):
     if objective == 'classification':
@@ -52,10 +54,7 @@ def fine_tune_cnn(
             f'["classification", "regression"], got "{objective}"'
         )
 
-    model_name = (
-        f'{cnn.__class__.__name__}_{objective}_{mel_bins=}_{augmentation=}_'
-        f'{chunking_strategy=}_{lr=}_{lr_reduction_factor=}'.replace("'", '')
-    ).replace('.', '_').replace('=', '_')
+    model_name = f'{cnn.__class__.__name__}/{objective}'
 
     # modules
     module = FineTuningTrainingModule(
@@ -63,7 +62,8 @@ def fine_tune_cnn(
         objective=objective,
         mel_bins=mel_bins,
         augmentation=augmentation,
-        chunking_strategy=chunking_strategy,
+        train_chunking_strategy=train_chunking_strategy,
+        eval_chunking_strategy=eval_chunking_strategy,
         lr=lr,
         lr_reduction_factor=lr_reduction_factor,
         lr_patience=lr_patience
@@ -81,7 +81,7 @@ def fine_tune_cnn(
 
     # callbacks
     early_stopping = EarlyStopping(
-        monitor="val_loss", mode="min", patience=patience, min_delta=1e-3, verbose=True
+        monitor="val_loss", mode="min", patience=patience, min_delta=min_delta, verbose=True
     )
     lr_monitor = LearningRateMonitor(logging_interval='step')
     model_checkpoint = ModelCheckpoint(
@@ -107,15 +107,17 @@ def fine_tune_cnn(
         'downsample_to': downsample_to,
         'mel_bins': mel_bins,
         'augmentation': augmentation,
-        'chunking_strategy': chunking_strategy,
+        'train_chunking_strategy': train_chunking_strategy,
+        'eval_chunking_strategy': eval_chunking_strategy,
         'max_epochs': max_epochs,
         'min_epochs': min_epochs,
         'lr_reduction_factor': lr_reduction_factor,
         'lr_patience': lr_patience,
         'lr': lr,
+        'min_delta': min_delta,
         'patience': patience,
         'batch_size': batch_size,
-        'max_grad_norm': max_grad_norm,
+        **tags,
         **kwargs
     }
     Path(csv_logger.log_dir).mkdir(parents=True, exist_ok=True)
@@ -131,7 +133,6 @@ def fine_tune_cnn(
         logger=[csv_logger],
         default_root_dir=model_name,
         log_every_n_steps=1,
-        gradient_clip_val=max_grad_norm,
         **kwargs,
     )
 
@@ -165,6 +166,10 @@ def main(
     fine_tune_cnn(
         cnn=cnn,
         objective=objective,
+        tags={
+            'model_name': model_name,
+            'pretrained': pretrained,
+        },
         **kwargs
     )
 
