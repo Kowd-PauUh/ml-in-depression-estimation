@@ -157,7 +157,7 @@ class FineTuningTrainingModule(L.LightningModule):
         self.save_hyperparameters(
             'objective', 'mel_bins', 
             'augmentation', 'train_chunking_strategy', 
-            'eval_chunking_strategy', 'lr_patience'
+            'eval_chunking_strategy', 'lr_patience',
             'lr', 'lr_reduction_factor', 
         )
         logger.info(
