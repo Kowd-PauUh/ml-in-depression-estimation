@@ -9,6 +9,7 @@ class LossMonitor(L.Callback):
         super().__init__()
         self.average_train_loss = average_train_loss
         self.save_format = save_format
+        self.artifact_path = None
 
     def on_train_end(self, trainer, pl_module):
         log_dir = pl_module.logger.log_dir
@@ -47,3 +48,5 @@ class LossMonitor(L.Callback):
             bbox_inches="tight"
         )
         plt.close()
+
+        self.artifact_path = f'{log_dir}/loss_curve.{self.save_format}'
