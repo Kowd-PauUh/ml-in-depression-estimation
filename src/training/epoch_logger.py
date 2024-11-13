@@ -37,4 +37,6 @@ class EpochLogger(L.Callback):
         self._log_epoch(trainer, pl_module)
 
     def _log_epoch(self, trainer, pl_module):
-        pl_module.log('step', trainer.current_epoch)
+        step = trainer.current_epoch
+        step = int(step) if step is not None else None
+        pl_module.log('step', step)
