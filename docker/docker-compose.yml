@@ -9,6 +9,7 @@ services:
         environment:
             - "PROJECT_DIR=${PROJECT_DIR}"
             - "MODELS_DIR=${PROJECT_DIR}/data/models"
+            - "MLFLOW_TRACKING_URI=http://0.0.0.0:1234"
         ports:
             - "8501:8000"  # jupyter port
             - "8502:1234"  # mlflow port
