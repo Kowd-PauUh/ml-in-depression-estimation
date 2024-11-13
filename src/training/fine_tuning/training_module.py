@@ -27,7 +27,8 @@ class FineTuningTrainingModule(L.LightningModule):
         # waveform operations
         mel_bins: int = 224,
         augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,
-        chunking_strategy: Literal['truncate', 'random', 'mean'] = 'truncate',
+        train_chunking_strategy: Literal['truncate', 'random', 'mean'] = 'truncate',
+        eval_chunking_strategy: Literal['truncate', 'mean'] = 'truncate',
         # learning rate
         lr: float = 3e-5,
         lr_reduction_factor: float = 0.5,
@@ -58,7 +59,8 @@ class FineTuningTrainingModule(L.LightningModule):
 
         # waveform operations
         self.augmentation = augmentation
-        self.chunking_strategy = chunking_strategy
+        self.train_chunking_strategy = train_chunking_strategy
+        self.eval_chunking_strategy = eval_chunking_strategy
 
         # learning rate
         self.lr = lr
@@ -137,23 +139,32 @@ class FineTuningTrainingModule(L.LightningModule):
                 f'{allowed_augmentations}, got "{self.augmentation}"'
             )
 
-        allowed_chunk_strategies = ['truncate', 'random', 'mean']
-        if self.chunking_strategy not in allowed_chunk_strategies:
+        allowed_train_chunk_strategies = ['truncate', 'random', 'mean']
+        if self.train_chunking_strategy not in allowed_train_chunk_strategies:
             raise ValueError(
-                f'Supported values for `augmentation` are '
-                f'{allowed_chunk_strategies}, got "{self.chunking_strategy}"'
+                f'Supported values for `train_chunking_strategy` are '
+                f'{allowed_train_chunk_strategies}, got "{self.train_chunking_strategy}"'
+            )
+
+        allowed_eval_chunk_strategies = ['truncate', 'mean']
+        if self.eval_chunking_strategy not in allowed_eval_chunk_strategies:
+            raise ValueError(
+                f'Supported values for `eval_chunking_strategy` are '
+                f'{allowed_eval_chunk_strategies}, got "{self.eval_chunking_strategy}"'
             )
 
         # save hyperparams
         self.save_hyperparameters(
             'objective', 'mel_bins', 
-            'augmentation', 'chunking_strategy', 
-            'lr', 'lr_reduction_factor', 'lr_patience'
+            'augmentation', 'train_chunking_strategy', 
+            'eval_chunking_strategy', 'lr_patience'
+            'lr', 'lr_reduction_factor', 
         )
         logger.info(
             f'Training {self.cnn.__class__.__name__} with {self.objective} objective '
             f'(mel_bins = {self.mel_bins}, augmentation = {self.augmentation}, '
-            f'chunking_strategy = {self.chunking_strategy}, lr = {self.lr}, '
+            f'train_chunking_strategy = {self.train_chunking_strategy}, '
+            f'eval_chunking_strategy = {self.eval_chunking_strategy}, lr = {self.lr}, '
             f'lr_reduction_factor = {self.lr_reduction_factor}, lr_patience = {self.lr_patience})'
         )
 
@@ -235,7 +246,7 @@ class FineTuningTrainingModule(L.LightningModule):
                 f'{self.__class__.__name__}._forward_pass can only take '
                 f'tensors of same length and width. Got {X.shape = }'
             )
-        return self.cnn(X)
+        return self.cnn(X.to(self.device))
 
     def _forward_pass_with_scores_averaging(self, X: torch.Tensor):
         raise NotImplementedError()
@@ -267,8 +278,7 @@ class FineTuningTrainingModule(L.LightningModule):
     #     return averaged_scores
 
     def forward(self, waveforms: List[Tuple[torch.Tensor, int]], eval_mode: bool = True):
-        if eval_mode and self.chunking_strategy == 'random':
-            raise ValueError('Random chunking is forbidden in inference mode.')
+        chunking_strategy = self.eval_chunking_strategy if eval_mode else self.train_chunking_strategy
 
         # apply aumentations during training
         if not eval_mode:
@@ -278,30 +288,30 @@ class FineTuningTrainingModule(L.LightningModule):
         mel_spectrograms = self._calculate_mel_spectrograms(waveforms)
 
         # forward pass with scores averaging
-        if self.chunking_strategy == 'mean':
+        if chunking_strategy == 'mean':
             mel_spectrograms = torch.stack(mel_spectrograms, dim=0)
             return self._forward_pass_with_scores_averaging(mel_spectrograms)
 
         # forward pass with truncation
-        if self.chunking_strategy == 'truncate':
+        if chunking_strategy == 'truncate':
             mel_spectrograms = [
                 repeat_tensor(truncate_or_pad(tensor=t, max_length=self.mel_bins))
                 for t in mel_spectrograms
             ]
-        elif self.chunking_strategy == 'random':
+        elif chunking_strategy == 'random':
             mel_spectrograms = [
                 repeat_tensor(get_random_chunk(tensor=t, chunk_length=self.mel_bins))
                 for t in mel_spectrograms
             ]
         else:
-            raise ValueError(f'Unsupported chunking strategy "{self.chunking_strategy}"')
+            raise ValueError(f'Unsupported chunking strategy "{chunking_strategy}"')
 
         mel_spectrograms = torch.stack(mel_spectrograms, dim=0)
         return self._forward_pass(mel_spectrograms)
 
     def forward_step(self, batch, eval_mode: bool = True):
         waveforms = [(w, sr) for w, sr, _ in batch]
-        y = torch.tensor([target_value for *_, target_value in batch])
+        y = torch.tensor([target_value for *_, target_value in batch]).to(self.device)
 
         # feed waveforms through model and calculate loss
         pred = self(waveforms=waveforms, eval_mode=eval_mode).squeeze()
@@ -314,6 +324,7 @@ class FineTuningTrainingModule(L.LightningModule):
         # calculate metrics
         metrics: dict = {}
         for metric_name, metric_fn in self.metrics_fns.items():
+            metric_fn.to(self.device)
             metrics[metric_name] = metric_fn(pred, y)
 
         return loss, metrics
