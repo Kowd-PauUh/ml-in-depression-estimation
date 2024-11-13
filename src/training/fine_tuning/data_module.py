@@ -162,30 +162,32 @@ class FineTuningDataModule(L.LightningDataModule):
         )
 
         # initialize fine-tuning datasets
-        self.train_dataset = FineTuningDataset(
-            df=train_df,
-            filepath_column_name=self.filepath_column_name,
-            target_column_name=self.target_column_name,
-            start_time_column_name=self.start_time_column_name,
-            end_time_column_name=self.end_time_column_name,
-            fast_mode=self.fast_mode
-        )
-        self.val_dataset = FineTuningDataset(
-            df=val_df,
-            filepath_column_name=self.filepath_column_name,
-            target_column_name=self.target_column_name,
-            start_time_column_name=self.start_time_column_name,
-            end_time_column_name=self.end_time_column_name,
-            fast_mode=self.fast_mode
-        )
-        self.test_dataset = FineTuningDataset(
-            df=test_df,
-            filepath_column_name=self.filepath_column_name,
-            target_column_name=self.target_column_name,
-            start_time_column_name=self.start_time_column_name,
-            end_time_column_name=self.end_time_column_name,
-            fast_mode=self.fast_mode
-        )
+        if stage == 'fit' or stage is None:
+            self.train_dataset = FineTuningDataset(
+                df=train_df,
+                filepath_column_name=self.filepath_column_name,
+                target_column_name=self.target_column_name,
+                start_time_column_name=self.start_time_column_name,
+                end_time_column_name=self.end_time_column_name,
+                fast_mode=self.fast_mode
+            )
+            self.val_dataset = FineTuningDataset(
+                df=val_df,
+                filepath_column_name=self.filepath_column_name,
+                target_column_name=self.target_column_name,
+                start_time_column_name=self.start_time_column_name,
+                end_time_column_name=self.end_time_column_name,
+                fast_mode=self.fast_mode
+            )
+        if stage == 'test' or stage is None:
+            self.test_dataset = FineTuningDataset(
+                df=test_df,
+                filepath_column_name=self.filepath_column_name,
+                target_column_name=self.target_column_name,
+                start_time_column_name=self.start_time_column_name,
+                end_time_column_name=self.end_time_column_name,
+                fast_mode=self.fast_mode
+            )
 
         # log splits statistics
         n_samples = len(df)
