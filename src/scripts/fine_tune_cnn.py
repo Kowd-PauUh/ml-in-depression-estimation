@@ -17,7 +17,7 @@ from src.training.fine_tuning.training_module import FineTuningTrainingModule
 from src.training.fine_tuning.data_module import FineTuningDataModule
 from src.training.co2_monitor import CO2Monitor
 from src.training.loss_monitor import LossMonitor
-from src.training.epoch_logger import EpochLogger
+from src.training.epoch_logger import EpochLogger, MLFlowLoggerAdapter
 
 
 EXPERIMENT_NAME = 'CNN fine-tuning'
@@ -161,10 +161,12 @@ def fine_tune_cnn(
             **tags
         }
     )
-    mlflow_logger = MLFlowLogger(
-        experiment_name=EXPERIMENT_NAME,
-        run_id=mlflow.active_run().info.run_id
-    )
+    mlflow_logger = MLFlowLoggerAdapter(
+        mlflow_logger=MLFlowLogger(
+            experiment_name=EXPERIMENT_NAME,
+            run_id=mlflow.active_run().info.run_id
+        )
+    )  # this is a workaround for logging epochs
 
     # trainer
     trainer = L.Trainer(
