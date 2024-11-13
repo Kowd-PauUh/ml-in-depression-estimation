@@ -9,7 +9,7 @@ jupyter
 seaborn
 
 # modelling
-torch
+torch>=1.9.0,<=2.4.1
 lightning
 torchaudio
 torchvision
