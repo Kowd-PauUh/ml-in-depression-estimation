@@ -17,7 +17,7 @@ from src.training.fine_tuning.training_module import FineTuningTrainingModule
 from src.training.fine_tuning.data_module import FineTuningDataModule
 from src.training.co2_monitor import CO2Monitor
 from src.training.loss_monitor import LossMonitor
-from src.training.epoch_logger import EpochLogger, MLFlowLoggerAdapter
+from src.training.epoch_logging import EpochLogger, MLFlowLoggerAdapter
 
 
 EXPERIMENT_NAME = 'CNN fine-tuning'
