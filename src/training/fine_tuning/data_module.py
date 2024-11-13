@@ -127,8 +127,8 @@ class FineTuningDataModule(L.LightningDataModule):
         else:
             logger.info(
                 f'Setting up {self.__class__.__name__} without specifying train and val indices. '
-                f'Training data will be split into train ad val split with stratification '
-                f'with each group appearing in only one dataset if possible.'
+                f'Training data will be split into train ad val split with stratification if possible '
+                f'with each group appearing in only one dataset.'
             )
 
             # group stratified split for train and val df with random_state
@@ -143,7 +143,10 @@ class FineTuningDataModule(L.LightningDataModule):
                     random_state=random_state
                 )
             except ValueError:
-                logger.warning('Failed to stratify splits.')
+                logger.warning(
+                    f'Failed to stratify splits by "{self.target_column_name}". '
+                    f'Splits have no shared groups.'
+                )
                 train_groups, val_groups = train_test_split(
                     groups.index,
                     test_size=self.val_size,
