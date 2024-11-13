@@ -48,6 +48,7 @@ def fine_tune_cnn(
     min_delta: float = 1e-3,
     patience: int = 2,
     batch_size: int = 32,
+    val_batch_size: int = 32,
     tags: dict = {},
     **kwargs
 ):
@@ -79,7 +80,7 @@ def fine_tune_cnn(
         target_column_name=target_column_name,
         downsample_to=downsample_to, 
         batch_size=batch_size, 
-        val_batch_size=batch_size,
+        val_batch_size=val_batch_size,
         fast_mode=not ram_optimized_mode,
     )
 
@@ -124,6 +125,7 @@ def fine_tune_cnn(
         'min_delta': min_delta,
         'patience': patience,
         'batch_size': batch_size,
+        'val_batch_size': val_batch_size,
         **tags,
         **kwargs
     }
