@@ -325,13 +325,18 @@ class FineTuningTrainingModule(L.LightningModule):
             Whether to also log to progress bar.
         """
         # log loss and store its value
-        getattr(self, f'_{step_name}_loss_vector').append(loss.cpu().detach())
-        self.log(f'{step_name}_loss', loss, prog_bar=prog_bar)
+        self.log(
+            f'{step_name}_loss', loss, prog_bar=prog_bar, 
+            on_step=True, on_epoch=True
+        )
 
         # log metrics and store their values
         for metric_name, metric_value in metrics.items():
-            getattr(self, f'_{step_name}_{metric_name}_vector').append(metric_value)
-            self.log(f'{step_name}_{metric_name}', metric_value, prog_bar=prog_bar)
+            self.log(
+                f'{step_name}_{metric_name}', metric_value, 
+                on_step=True, on_epoch=True, 
+                prog_bar=prog_bar
+            )
 
     def training_step(self, batch, _):
         loss, metrics = self.forward_step(batch, eval_mode=False)
@@ -339,12 +344,14 @@ class FineTuningTrainingModule(L.LightningModule):
         return loss
 
     def validation_step(self, batch, _):
-        loss, metrics = self.forward_step(batch)
-        self.store_metrics(loss=loss, metrics=metrics, step_name='val', prog_bar=True)
+        with torch.no_grad():
+            loss, metrics = self.forward_step(batch)
+            self.store_metrics(loss=loss, metrics=metrics, step_name='val', prog_bar=True)
 
     def test_step(self, batch, _):
-        loss, metrics = self.forward_step(batch)
-        self.store_metrics(loss=loss, metrics=metrics, step_name='test')
+        with torch.no_grad():
+            loss, metrics = self.forward_step(batch)
+            self.store_metrics(loss=loss, metrics=metrics, step_name='test')
 
     def configure_optimizers(self):
         optimizer = optim.AdamW(self.parameters(), self.lr)
