@@ -11,6 +11,7 @@ services:
             - "MODELS_DIR=${PROJECT_DIR}/data/models"
         ports:
             - "8501:8000"  # jupyter port
+            - "8502:1234"  # mlflow port
         volumes:
             - ${PROJECT_DIR}:${PROJECT_DIR}
         deploy:
