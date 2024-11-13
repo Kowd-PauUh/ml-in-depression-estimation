@@ -17,6 +17,7 @@ from src.training.fine_tuning.training_module import FineTuningTrainingModule
 from src.training.fine_tuning.data_module import FineTuningDataModule
 from src.training.co2_monitor import CO2Monitor
 from src.training.loss_monitor import LossMonitor
+from src.training.epoch_logger import EpochLogger
 
 
 EXPERIMENT_NAME = 'CNN fine-tuning'
@@ -104,6 +105,7 @@ def fine_tune_cnn(
     model_checkpoint.CHECKPOINT_EQUALS_CHAR = '_'
     co2_monitor = CO2Monitor()
     loss_monitor = LossMonitor()
+    epoch_logger = EpochLogger()
 
     # save training hyperparams
     train_hparams = {
@@ -168,7 +170,14 @@ def fine_tune_cnn(
     trainer = L.Trainer(
         max_epochs=max_epochs,
         min_epochs=min_epochs,
-        callbacks=[early_stopping, model_checkpoint, lr_monitor, co2_monitor, loss_monitor],
+        callbacks=[
+            early_stopping, 
+            model_checkpoint, 
+            lr_monitor, 
+            co2_monitor, 
+            loss_monitor,
+            epoch_logger,
+        ],
         logger=[csv_logger, mlflow_logger],
         default_root_dir=model_name,
         log_every_n_steps=1,
