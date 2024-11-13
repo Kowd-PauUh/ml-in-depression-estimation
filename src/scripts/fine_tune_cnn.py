@@ -46,7 +46,7 @@ def fine_tune_cnn(
     lr_patience: int = 3,
     lr: float = 1e-5,
     min_delta: float = 1e-3,
-    patience: int = 3,
+    patience: int = 2,
     batch_size: int = 32,
     tags: dict = {},
     **kwargs
