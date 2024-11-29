@@ -52,6 +52,9 @@ class FineTuningDataset(Dataset):
     ...     fast_mode=True  # set to False for RAM-optimised data loading
     ... )
     """
+    _waveforms: dict = dict()
+    total_size: int = 0
+
     def __init__(
         self,
         df: pd.DataFrame,
@@ -112,9 +115,11 @@ class FineTuningDataset(Dataset):
 
             filepaths = self.df[self.filepath_column_name].unique()  # all unique filepaths
             pbar = tqdm(filepaths, desc='Loading waveforms')
-            total_size = 0
 
             for filepath in pbar:
+                if filepath in self._waveforms:
+                    continue
+
                 # load waveform
                 waveform, sr = load_waveform(audio_path=filepath, normalize=True)
 
@@ -127,14 +132,15 @@ class FineTuningDataset(Dataset):
                     )
                     sr = self.target_sr
 
+                # add to the class attribute
                 self._waveforms[filepath] = (waveform, sr)
 
                 # log to progress bar
-                total_size += waveform.element_size() * waveform.nelement()
+                self.total_size += waveform.element_size() * waveform.nelement()
                 pbar.set_postfix(
                     {
                         'files': len(self._waveforms), 
-                        'total_size': self.sizeof_fmt(total_size)
+                        'total_size': self.sizeof_fmt(self.total_size)
                     }
                 )
         else:
