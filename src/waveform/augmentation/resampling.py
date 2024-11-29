@@ -1,7 +1,19 @@
+from typing import Sequence
 import random
+from functools import lru_cache
 
 import torch
 import torchaudio.transforms as T
+import numpy as np
+
+
+@lru_cache
+def _get_resampler(
+    orig_freq: int, 
+    factors: Sequence[float] = np.linspace(0.8, 1.25, 10),
+):
+    resampler = T.SpeedPerturbation(orig_freq=orig_freq, factors=factors)
+    return resampler
 
 
 def random_resample(
@@ -29,12 +41,15 @@ def random_resample(
     torch.Tensor
         The resampled waveform.
     """
+    # get input tensor device
+    device = waveform.device
+
+    # get original waveform length
     original_len = waveform.size(1)
-    resample_factor = random.uniform(0.8, 1.25)
-    new_sample_rate = int(orig_sample_rate * resample_factor)
-    
-    resampler = T.Resample(orig_freq=orig_sample_rate, new_freq=new_sample_rate)
-    resampled_waveform = resampler(waveform)
+
+    # resample waveform
+    resampler = _get_resampler(orig_freq=orig_sample_rate).to(device)
+    resampled_waveform, _ = resampler(waveform)
 
     # trim if needed
     if resampled_waveform.size(1) > original_len and trim:
@@ -44,5 +59,5 @@ def random_resample(
     if resampled_waveform.size(1) < original_len and pad:
         padding = original_len - resampled_waveform.size(1)
         resampled_waveform = torch.nn.functional.pad(resampled_waveform, (0, padding))
-    
+
     return resampled_waveform
