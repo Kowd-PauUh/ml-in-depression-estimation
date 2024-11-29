@@ -8,7 +8,7 @@ import numpy as np
 
 
 @lru_cache
-def _get_resampler(
+def _get_random_resampler(
     orig_freq: int, 
     factors: Sequence[float] = np.linspace(0.8, 1.25, 10),
 ):
@@ -48,7 +48,7 @@ def random_resample(
     original_len = waveform.size(1)
 
     # resample waveform
-    resampler = _get_resampler(orig_freq=orig_sample_rate).to(device)
+    resampler = _get_random_resampler(orig_freq=orig_sample_rate).to(device)
     resampled_waveform, _ = resampler(waveform)
 
     # trim if needed
