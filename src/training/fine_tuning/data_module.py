@@ -83,6 +83,8 @@ class FineTuningDataModule(L.LightningDataModule):
         self.val_batch_size = val_batch_size
         self.seed = seed
 
+        self.is_set_up = False
+
     def load_df(self) -> pd.DataFrame:
         logger.info(f"Using dataset at {self.dataset_path} with split data at {self.split_df_path}")
 
@@ -119,6 +121,11 @@ class FineTuningDataModule(L.LightningDataModule):
         return df
 
     def setup(self, stage: str | None = None):
+        # skip setup if already set up and stage is None
+        if self.is_set_up and stage is None:
+            return
+
+        # load data
         df = self.load_df()
 
         test_df = df[df[self.split_column_name] == self.test_split_name]
@@ -206,6 +213,10 @@ class FineTuningDataModule(L.LightningDataModule):
             f'Val: {len(val_df)} / {n_samples} ({len(val_df) / n_samples: .4f})\n'
             f'Test: {len(test_df)} / {n_samples} ({len(test_df) / n_samples: .4f})'
         )
+
+        # set setup flag if all datasets were loaded
+        if stage is None:
+            self.is_set_up = True
 
     def train_dataloader(self):
         return DataLoader(
