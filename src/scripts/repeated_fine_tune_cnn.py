@@ -3,6 +3,7 @@ import sys
 from typing import Literal
 from pathlib import Path
 import json
+from time import time
 
 import torch
 import lightning as L
@@ -20,12 +21,13 @@ from src.training.loss_monitor import LossMonitor
 from src.training.epoch_logging import EpochLogger, MLFlowLoggerAdapter
 
 
-EXPERIMENT_NAME = 'CNN fine-tuning'
+EXPERIMENT_NAME = 'CNN fine-tuning repeated'
 PROJECT_DIR = Path(os.environ['PROJECT_DIR'])
 MODELS_DIR = Path(os.environ.get("MODELS_DIR", PROJECT_DIR/ "data/models")) / 'fine_tuning'
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 mlflow.set_tracking_uri(os.environ['MLFLOW_TRACKING_URI'])
+timestamp = str(time()).replace('.', '')
 
 
 def repeated_fine_tune_cnn(
@@ -163,6 +165,8 @@ def repeated_fine_tune_cnn(
             mlflow.start_run(
                 run_name=model_name, 
                 tags={
+                    'experiment_name': EXPERIMENT_NAME,
+                    'cross_validation': timestamp,
                     'cnn': cnn.__class__.__name__,
                     'objective': objective,
                     'augmentation': str(augmentation),
