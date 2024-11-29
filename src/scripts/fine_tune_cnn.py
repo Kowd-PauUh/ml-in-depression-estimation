@@ -153,6 +153,7 @@ def fine_tune_cnn(
     mlflow.start_run(
         run_name=model_name, 
         tags={
+            'experiment_name': EXPERIMENT_NAME,
             'cnn': cnn.__class__.__name__,
             'objective': objective,
             'augmentation': str(augmentation),
