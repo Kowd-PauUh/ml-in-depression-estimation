@@ -1,7 +1,7 @@
 # data processing
 scikit-learn
 pandas
-numpy
+numpy<2
 tqdm
 
 # eda
@@ -9,7 +9,8 @@ jupyter
 seaborn
 
 # modelling
-torch>1.9.0,<2.4.1
+# torch>1.9.0,<2.4.1
+torch==2.0.1
 lightning
 torchaudio
 torchvision
