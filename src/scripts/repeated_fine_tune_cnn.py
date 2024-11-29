@@ -20,7 +20,7 @@ from src.training.loss_monitor import LossMonitor
 from src.training.epoch_logging import EpochLogger, MLFlowLoggerAdapter
 
 
-EXPERIMENT_NAME = 'CNN fine-tuning repeated'
+EXPERIMENT_NAME = 'CNN fine-tuning'
 PROJECT_DIR = Path(os.environ['PROJECT_DIR'])
 MODELS_DIR = Path(os.environ.get("MODELS_DIR", PROJECT_DIR/ "data/models")) / 'fine_tuning'
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -28,13 +28,10 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 mlflow.set_tracking_uri(os.environ['MLFLOW_TRACKING_URI'])
 
 
-def fine_tune_cnn(
+def repeated_fine_tune_cnn(
     cnn,
     objective: Literal['classification', 'regression'],
     evaluate_on_test_split: bool = True,
-    # cross-validation
-    n_folds: int = 5,
-    n_repetitions: int = 2,
     # dataset
     ram_optimized_mode: bool = True,
     downsample_to: int | None = None,
@@ -68,18 +65,7 @@ def fine_tune_cnn(
 
     model_name = f'{cnn.__class__.__name__}/{objective}'
 
-    # setup data module once
-    data_module = FineTuningDataModule(
-        target_column_name=target_column_name,
-        downsample_to=downsample_to, 
-        batch_size=batch_size, 
-        val_batch_size=val_batch_size,
-        fast_mode=not ram_optimized_mode,
-    )
-    data_module.setup()
-
-    for 
-    # model
+    # modules
     model = FineTuningTrainingModule(
         cnn=cnn, 
         objective=objective,
@@ -91,6 +77,13 @@ def fine_tune_cnn(
         lr_reduction_factor=lr_reduction_factor,
         lr_patience=lr_patience,
     ).to(DEVICE)
+    data_module = FineTuningDataModule(
+        target_column_name=target_column_name,
+        downsample_to=downsample_to, 
+        batch_size=batch_size, 
+        val_batch_size=val_batch_size,
+        fast_mode=not ram_optimized_mode,
+    )
 
     # loggers
     csv_logger = CSVLogger(save_dir=MODELS_DIR / model_name, name=None)
@@ -119,8 +112,6 @@ def fine_tune_cnn(
         'task': 'fine-tuning',
         'cnn': cnn.__class__.__name__,
         'objective': objective,
-        'n_folds': n_folds,
-        'n_repetitions': n_repetitions,
         'evaluate_on_test_split': evaluate_on_test_split,
         'ram_optimized_mode': ram_optimized_mode,
         'downsample_to': downsample_to,
@@ -252,7 +243,7 @@ def main(
     **kwargs
 ):
     cnn = get_model(model_name, pretrained)
-    fine_tune_cnn(
+    repeated_fine_tune_cnn(
         cnn=cnn,
         objective=objective,
         tags={
