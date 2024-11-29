@@ -6,7 +6,7 @@ import lightning as L
 import pandas as pd
 from loguru import logger
 from torch.utils.data import DataLoader
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 
 from src.training.fine_tuning.dataset import FineTuningDataset
 
@@ -127,7 +127,9 @@ class FineTuningDataModule(L.LightningDataModule):
 
         # load data
         df = self.load_df()
+        df = df.sample(frac=1, random_state=self.seed)
 
+        # define test dataset
         test_df = df[df[self.split_column_name] == self.test_split_name]
 
         if self.fold_idx is not None and self.n_folds is not None:
@@ -136,7 +138,18 @@ class FineTuningDataModule(L.LightningDataModule):
                 f'cross-validation with  validation performed on fold with id '
                 f'{self.fold_idx}. Note that this mode overrides `val_size` parameter.'
             )
-            # TODO: implement cross validation
+
+            # group stratified split for train and val df
+            train_val_df = df[df[self.split_column_name] == self.train_val_split_name]
+            groups = train_val_df.groupby(self.grouping_column_name).first()
+            groups = groups.sample(frac=1, random_state=self.seed)
+
+            # split groups into folds
+            kfold = KFold(n_splits=self.n_folds, shuffle=False, random_state=self.seed)
+
+            # take appropriate split by self.fold_idx
+            train_groups_idx, val_groups_idx = list(kfold.split(groups.index))[self.fold_idx]
+            train_groups, val_groups = groups.index[train_groups_idx], groups.index[val_groups_idx]
         else:
             logger.info(
                 f'Setting up {self.__class__.__name__} using `val_size={self.val_size}`. '
@@ -147,6 +160,7 @@ class FineTuningDataModule(L.LightningDataModule):
             # group stratified split for train and val df
             train_val_df = df[df[self.split_column_name] == self.train_val_split_name]
             groups = train_val_df.groupby(self.grouping_column_name).first()
+            groups = groups.sample(frac=1, random_state=self.seed)
 
             try:
                 train_groups, val_groups = train_test_split(
@@ -166,8 +180,9 @@ class FineTuningDataModule(L.LightningDataModule):
                     random_state=self.seed,
                 )
 
-            train_df = train_val_df[train_val_df[self.grouping_column_name].isin(train_groups)]
-            val_df = train_val_df[train_val_df[self.grouping_column_name].isin(val_groups)]
+        # define train and val datasets
+        train_df = train_val_df[train_val_df[self.grouping_column_name].isin(train_groups)]
+        val_df = train_val_df[train_val_df[self.grouping_column_name].isin(val_groups)]
 
         # log stratification results
         logger.info(
