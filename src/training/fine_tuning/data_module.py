@@ -145,7 +145,7 @@ class FineTuningDataModule(L.LightningDataModule):
             groups = groups.sample(frac=1, random_state=self.seed)
 
             # split groups into folds
-            kfold = KFold(n_splits=self.n_folds, shuffle=False, random_state=self.seed)
+            kfold = KFold(n_splits=self.n_folds, shuffle=False)
 
             # take appropriate split by self.fold_idx
             train_groups_idx, val_groups_idx = list(kfold.split(groups.index))[self.fold_idx]
