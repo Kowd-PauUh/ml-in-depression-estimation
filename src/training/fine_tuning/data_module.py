@@ -35,10 +35,15 @@ class FineTuningDataModule(L.LightningDataModule):
         # preprocessing
         fast_mode: bool = True,
         downsample_to: int | None = None,
+        downsampling_seed: int | None = 42,
         val_size: float = 0.2,
+        # crossval (overrides val_size)
+        fold_idx: int | None = None,
+        n_folds: int | None = None,
         # training
         batch_size: int = 16,
         val_batch_size: int = 16,
+        seed: int | None = 42,
     ):
         super().__init__()
 
@@ -60,9 +65,13 @@ class FineTuningDataModule(L.LightningDataModule):
         # preprocessing
         self.fast_mode = fast_mode
         self.downsample_to = downsample_to
+        self.downsampling_seed = downsampling_seed
         self.val_size = val_size
-        self.train_size = 1 - val_size
         self.collate_fn = lambda batch: batch
+
+        # crossval (overrides val_size)
+        self.fold_idx = fold_idx
+        self.n_folds = n_folds
 
         # batch sizes
         if batch_size % 2 != 0 or val_batch_size % 2 != 0:
@@ -72,6 +81,7 @@ class FineTuningDataModule(L.LightningDataModule):
             )
         self.batch_size = batch_size
         self.val_batch_size = val_batch_size
+        self.seed = seed
 
     def load_df(self) -> pd.DataFrame:
         logger.info(f"Using dataset at {self.dataset_path} with split data at {self.split_df_path}")
@@ -84,7 +94,7 @@ class FineTuningDataModule(L.LightningDataModule):
                 f'entries but it contains {len(df)} entries.'
             )
         elif self.downsample_to:
-            df = df.sample(self.downsample_to, random_state=42)
+            df = df.sample(self.downsample_to, random_state=self.downsampling_seed)
             logger.info(f'Dataset is downsampled to {self.downsample_to} entries.')
 
         # assign split to each row in dataframe
@@ -108,30 +118,26 @@ class FineTuningDataModule(L.LightningDataModule):
 
         return df
 
-    def setup(
-        self,
-        df: pd.DataFrame | None = None,
-        train_ids: List[int] | None = None,
-        val_ids: List[int] | None = None,
-        random_state: int | None = 42,
-        stage: str | None = None
-    ):
-        if df is None:
-            df = self.load_df()
+    def setup(self, stage: str | None = None):
+        df = self.load_df()
 
         test_df = df[df[self.split_column_name] == self.test_split_name]
 
-        if train_ids is not None and val_ids is not None:
-            train_df = df.iloc[train_ids]
-            val_df = df.iloc[val_ids]
+        if self.fold_idx is not None and self.n_folds is not None:
+            logger.info(
+                f'Setting up {self.__class__.__name__} using {self.n_folds}-fold '
+                f'cross-validation with  validation performed on fold with id '
+                f'{self.fold_idx}. Note that this mode overrides `val_size` parameter.'
+            )
+            # TODO: implement cross validation
         else:
             logger.info(
-                f'Setting up {self.__class__.__name__} without specifying train and val indices. '
-                f'Training data will be split into train ad val split with stratification if possible '
-                f'with each group appearing in only one dataset.'
+                f'Setting up {self.__class__.__name__} using `val_size={self.val_size}`. '
+                f'Training data will be split into train ad val split with stratification '
+                f'if possible, with each group appearing in only one dataset.'
             )
 
-            # group stratified split for train and val df with random_state
+            # group stratified split for train and val df
             train_val_df = df[df[self.split_column_name] == self.train_val_split_name]
             groups = train_val_df.groupby(self.grouping_column_name).first()
 
@@ -140,7 +146,7 @@ class FineTuningDataModule(L.LightningDataModule):
                     groups.index,
                     test_size=self.val_size,
                     stratify=groups[self.target_column_name],
-                    random_state=random_state
+                    random_state=self.seed,
                 )
             except ValueError:
                 logger.warning(
@@ -150,7 +156,7 @@ class FineTuningDataModule(L.LightningDataModule):
                 train_groups, val_groups = train_test_split(
                     groups.index,
                     test_size=self.val_size,
-                    random_state=random_state
+                    random_state=self.seed,
                 )
 
             train_df = train_val_df[train_val_df[self.grouping_column_name].isin(train_groups)]
