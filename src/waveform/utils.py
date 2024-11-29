@@ -1,8 +1,10 @@
 from typing import Tuple
 from pathlib import Path
+from functools import lru_cache
 
 import torch
 import torchaudio
+import torchaudio.transforms as T
 
 
 def load_waveform(
@@ -92,6 +94,12 @@ def trim_waveform(
     return waveform[:, start_idx:end_idx]
 
 
+@lru_cache
+def _get_resampler(orig_freq: int, new_freq: int):
+    resampler = T.Resample(orig_freq=orig_freq, new_freq=new_freq)
+    return resampler
+
+
 def resample_waveform(waveform: torch.Tensor, orig_sample_rate: int, target_sample_rate: int) -> torch.Tensor:
     """
     Resamples the waveform to match the target sample rate.
@@ -111,6 +119,6 @@ def resample_waveform(waveform: torch.Tensor, orig_sample_rate: int, target_samp
         The resampled waveform.
     """
     if orig_sample_rate != target_sample_rate:
-        resampler = torchaudio.transforms.Resample(orig_freq=orig_sample_rate, new_freq=target_sample_rate)
+        resampler = _get_resampler(orig_freq=orig_sample_rate, new_freq=target_sample_rate)
         waveform = resampler(waveform)
     return waveform
