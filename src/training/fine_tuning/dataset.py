@@ -104,7 +104,6 @@ class FineTuningDataset(Dataset):
         self.end_time_column_name = end_time_column_name
         self.fast_mode = fast_mode
         self.target_sr = target_sr
-        self._waveforms = {}
 
         unique_filepaths_cnt = len(self.df[self.filepath_column_name].unique())
         if self.fast_mode:
@@ -117,7 +116,7 @@ class FineTuningDataset(Dataset):
             pbar = tqdm(filepaths, desc='Loading waveforms')
 
             for filepath in pbar:
-                if filepath in self._waveforms:
+                if filepath in FineTuningDataset._waveforms:
                     continue
 
                 # load waveform
@@ -132,15 +131,15 @@ class FineTuningDataset(Dataset):
                     )
                     sr = self.target_sr
 
-                # add to the class attribute
-                self._waveforms[filepath] = (waveform, sr)
+                # cache waveform
+                FineTuningDataset._waveforms[filepath] = (waveform, sr)
 
                 # log to progress bar
-                self.total_size += waveform.element_size() * waveform.nelement()
+                FineTuningDataset.total_size += waveform.element_size() * waveform.nelement()
                 pbar.set_postfix(
                     {
-                        'files': len(self._waveforms), 
-                        'total_size': self.sizeof_fmt(self.total_size)
+                        'files': len(FineTuningDataset._waveforms), 
+                        'total_size': self.sizeof_fmt(FineTuningDataset.total_size)
                     }
                 )
         else:
@@ -188,7 +187,7 @@ class FineTuningDataset(Dataset):
 
         # load waveform
         if self.fast_mode:
-            waveform, sr = self._waveforms[filepath]
+            waveform, sr = FineTuningDataset._waveforms[filepath]
         else:
             waveform, sr = load_waveform(audio_path=filepath, normalize=True)
 
