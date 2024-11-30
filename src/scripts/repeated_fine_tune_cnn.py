@@ -52,7 +52,7 @@ def repeated_fine_tune_cnn(
     lr_patience: int = 3,
     lr: float = 1e-5,
     min_delta: float = 1e-3,
-    patience: int = 2,
+    patience: int = 1,
     batch_size: int = 32,
     val_batch_size: int = 32,
     tags: dict = {},
@@ -236,9 +236,12 @@ def repeated_fine_tune_cnn(
                 mlflow.log_artifact(train_hparams_path.as_posix())
                 mlflow.log_artifact(Path(csv_logger.log_dir, 'metrics.csv').as_posix())
 
+                mlflow.end_run()
             except Exception as e:
                 # create empty file named "failure" on exception
                 open(Path(csv_logger.log_dir) / 'failure', 'a').close()
+
+                mlflow.end_run('FAILED')
                 raise e
 
 
