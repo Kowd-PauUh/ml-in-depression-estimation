@@ -49,7 +49,7 @@ def repeated_fine_tune_cnn(
     max_epochs: int = 10,
     min_epochs: int = 1,
     lr_reduction_factor: float = 0.5,
-    lr_patience: int = 3,
+    lr_patience: int = 0,
     lr: float = 1e-5,
     min_delta: float = 1e-3,
     patience: int = 1,
