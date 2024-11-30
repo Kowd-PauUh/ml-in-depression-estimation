@@ -2,15 +2,19 @@
 
 model_name="resnet18"
 objective="regression"
-augmentation_space="weak weak weak weak weak moderate moderate moderate moderate moderate"
+augmentation_space="weak moderate"
 batch_size=16
 train_chunking_strategy="random"
 eval_chunking_strategy="truncate"
 ram_optimized_mode=False
 max_epochs=30
 
+# cross-validation params
+n_folds=5
+n_repetitions=2
+
 for augmentation in $augmentation_space; do
-    python3 $PROJECT_DIR/src/scripts/fine_tune_cnn.py \
+    python3 $PROJECT_DIR/src/scripts/repeated_fine_tune_cnn.py \
       --model_name=${model_name} \
       --objective=${objective} \
       --train_chunking_strategy=${train_chunking_strategy} \
@@ -18,5 +22,7 @@ for augmentation in $augmentation_space; do
       --batch_size=${batch_size} \
       --ram_optimized_mode=${ram_optimized_mode} \
       --max_epochs=${max_epochs} \
-      --augmentation=${augmentation}
+      --augmentation=${augmentation} \
+      --n_folds=${n_folds} \
+      --n_repetitions=${n_repetitions}
 done
