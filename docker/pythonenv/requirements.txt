@@ -15,6 +15,7 @@ lightning
 torchaudio
 torchvision
 torchmetrics
+numpy<2
 
 # training
 tensorboard
