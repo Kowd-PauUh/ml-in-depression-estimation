@@ -1,5 +1,6 @@
 import random
 from typing import Dict, List, Tuple, Literal
+import math
 
 import torch
 from torch import optim
@@ -35,6 +36,8 @@ class FineTuningTrainingModule(L.LightningModule):
         lr_patience: int = 3,
         # optimizer
         optimizer: Literal['AdamW', 'SGD'] = 'AdamW',
+        # compute
+        compute_batch_size: int = 256,
     ):
         super().__init__()
 
@@ -72,15 +75,8 @@ class FineTuningTrainingModule(L.LightningModule):
         # optimizer
         self.optimizer = optimizer
 
-        # loss monitoring
-        self._train_loss_vector = []
-        self._val_loss_vector = []
-        self._test_loss_vector = []
-
-        # metrics monitoring
-        for metric_name in self.metrics_fns:
-            for step_name in ['train', 'val', 'test']:
-                setattr(self, f'_{step_name}_{metric_name}_vector', [])
+        # compute
+        self.compute_batch_size = compute_batch_size
 
         self._validate_init()
 
@@ -246,8 +242,8 @@ class FineTuningTrainingModule(L.LightningModule):
                     sample_rate=sample_rate,
                     num_mel_bins=self.mel_bins,
                     length=3072,  # approximately 30s of audio
-                    padding=True,
-                    truncation=True
+                    padding=False,
+                    truncation=False
                 )
             )
 
@@ -261,8 +257,43 @@ class FineTuningTrainingModule(L.LightningModule):
             )
         return self.cnn(X.to(self.device))
 
-    def _forward_pass_with_scores_averaging(self, X: torch.Tensor):
-        raise NotImplementedError()
+    def _forward_pass_with_chunking(self, mel_spectrograms: List[torch.Tensor]):
+        all_chunks = []
+        chunk_lengths = []
+
+        # for each spectrogram
+        for mel_spectrogram in mel_spectrograms:
+            # obtain number of chunks
+            mel_chunks_cnt = mel_spectrogram.shape[1] // self.mel_bins
+            chunk_lengths.append(mel_chunks_cnt)
+            
+            # split waveform tensor into chunks
+            # drop last chunk if it's shorter than `self.mel_bins`
+            if mel_spectrogram.shape[1] % self.mel_bins == 0:
+                all_chunks += torch.split(mel_spectrogram, self.mel_bins, dim=1)
+            else:
+                all_chunks += torch.split(mel_spectrogram, self.mel_bins, dim=1)
+                all_chunks.pop(-1)  
+
+        # repeat chunks in 3 dimensions
+        all_chunks = [repeat_tensor(chunk) for chunk in all_chunks]
+        all_chunks = torch.stack(all_chunks, dim=0)
+
+        # feed through features extractor using `self.compute_batch_size`
+        forward_pass_result = []
+        for i in range(math.ceil(len(all_chunks) / self.compute_batch_size)):
+            print(i)
+            forward_pass_result.append(
+                module._forward_pass(
+                    all_chunks[i*self.compute_batch_size:(i + 1)*self.compute_batch_size]
+                )
+            )
+
+        # combine the results
+        forward_pass_result = torch.cat(forward_pass_result, axis=0)
+        forward_pass_result_per_chunk = torch.split(forward_pass_result, chunk_lengths)
+
+        return forward_pass_result_per_chunk
 
     def forward(self, waveforms: List[Tuple[torch.Tensor, int]], eval_mode: bool = True):
         chunking_strategy = self.eval_chunking_strategy if eval_mode else self.train_chunking_strategy
@@ -276,10 +307,18 @@ class FineTuningTrainingModule(L.LightningModule):
 
         # forward pass with scores averaging
         if chunking_strategy == 'mean':
-            mel_spectrograms = torch.stack(mel_spectrograms, dim=0)
-            return self._forward_pass_with_scores_averaging(mel_spectrograms)
+            # feed with chunking through CNN
+            scores = self._forward_pass_with_chunking(mel_spectrograms)
 
-        # forward pass with truncation
+            # average scores
+            return torch.cat(
+                [
+                    torch.mean(chunk_scores, dim=0, keepdim=True) 
+                    for chunk_scores in scores
+                ]
+            )
+
+        # forward pass on single chunk
         if chunking_strategy == 'truncate':
             mel_spectrograms = [
                 repeat_tensor(truncate_or_pad(tensor=t, max_length=self.mel_bins))
@@ -324,7 +363,7 @@ class FineTuningTrainingModule(L.LightningModule):
         prog_bar: bool = False
     ):
         """
-        Logs loss and metrics and stors them into `_{step_name}_{metric_name}_vector` attribute.
+        Logs loss and metrics.
 
         Parameters
         ----------
@@ -373,7 +412,7 @@ class FineTuningTrainingModule(L.LightningModule):
             optimizer = optim.SGD(self.parameters(), self.lr)
         else:
             raise ValueError(f'Unsupported optimizer: {self.optimizer}')
-            
+
         return {
             'optimizer': optimizer,
             'lr_scheduler': ReduceLROnPlateau(optimizer, patience=self.lr_patience, factor=0.5),
