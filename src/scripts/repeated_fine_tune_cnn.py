@@ -51,6 +51,7 @@ def repeated_fine_tune_cnn(
     lr_reduction_factor: float = 0.5,
     lr_patience: int = 0,
     lr: float = 1e-5,
+    optimizer: Literal['AdamW', 'SGD'] = 'AdamW',
     min_delta: float = 1e-3,
     patience: int = 1,
     batch_size: int = 32,
@@ -83,6 +84,7 @@ def repeated_fine_tune_cnn(
                 lr=lr,
                 lr_reduction_factor=lr_reduction_factor,
                 lr_patience=lr_patience,
+                optimizer=optimizer,
             ).to(DEVICE)
             data_module = FineTuningDataModule(
                 target_column_name=target_column_name,
@@ -136,6 +138,7 @@ def repeated_fine_tune_cnn(
                 'lr_reduction_factor': lr_reduction_factor,
                 'lr_patience': lr_patience,
                 'lr': lr,
+                'optimizer': optimizer,
                 'min_delta': min_delta,
                 'patience': patience,
                 'batch_size': batch_size,
