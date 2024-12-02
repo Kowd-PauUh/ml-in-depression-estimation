@@ -32,7 +32,9 @@ class FineTuningTrainingModule(L.LightningModule):
         # learning rate
         lr: float = 3e-5,
         lr_reduction_factor: float = 0.5,
-        lr_patience: int = 3
+        lr_patience: int = 3,
+        # optimizer
+        optimizer: Literal['AdamW', 'SGD'] = 'AdamW',
     ):
         super().__init__()
 
@@ -66,6 +68,9 @@ class FineTuningTrainingModule(L.LightningModule):
         self.lr = lr
         self.lr_reduction_factor = lr_reduction_factor
         self.lr_patience = lr_patience
+
+        # optimizer
+        self.optimizer = optimizer
 
         # loss monitoring
         self._train_loss_vector = []
@@ -153,15 +158,23 @@ class FineTuningTrainingModule(L.LightningModule):
                 f'{allowed_eval_chunk_strategies}, got "{self.eval_chunking_strategy}"'
             )
 
+        allowed_optimizers = ['AdamW', 'SGD']
+        if self.optimizer not in allowed_optimizers:
+            raise ValueError(
+                f'Supported values for `optimizer` are '
+                f'{allowed_optimizers}, got "{self.optimizer}"'
+            )
+
         # save hyperparams
         self.save_hyperparameters(
             'objective', 'mel_bins', 
             'augmentation', 'train_chunking_strategy', 
             'eval_chunking_strategy', 'lr_patience',
-            'lr', 'lr_reduction_factor', 
+            'lr', 'lr_reduction_factor', 'optimizer'
         )
         logger.info(
             f'Training {self.cnn.__class__.__name__} with {self.objective} objective '
+            f'and {self.optimizer} optimizer '
             f'(mel_bins = {self.mel_bins}, augmentation = {self.augmentation}, '
             f'train_chunking_strategy = {self.train_chunking_strategy}, '
             f'eval_chunking_strategy = {self.eval_chunking_strategy}, lr = {self.lr}, '
@@ -354,7 +367,13 @@ class FineTuningTrainingModule(L.LightningModule):
             self.store_metrics(loss=loss, metrics=metrics, step_name='test')
 
     def configure_optimizers(self):
-        optimizer = optim.AdamW(self.parameters(), self.lr)
+        if self.optimizer == 'AdamW':
+            optimizer = optim.AdamW(self.parameters(), self.lr)
+        elif self.optimizer == 'SGD':
+            optimizer = optim.SGD(self.parameters(), self.lr)
+        else:
+            raise ValueError(f'Unsupported optimizer: {self.optimizer}')
+            
         return {
             'optimizer': optimizer,
             'lr_scheduler': ReduceLROnPlateau(optimizer, patience=self.lr_patience, factor=0.5),
