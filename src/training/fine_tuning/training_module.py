@@ -181,6 +181,10 @@ class FineTuningTrainingModule(L.LightningModule):
         self,
         waveforms: List[Tuple[torch.Tensor, int]]
     ) -> List[Tuple[torch.Tensor, int]]:
+        # identity if no augmentation
+        if self.augmentation is None:
+            return waveforms
+
         augmented_waveforms = []
 
         # iterate through training examples pairs and apply augmentations
