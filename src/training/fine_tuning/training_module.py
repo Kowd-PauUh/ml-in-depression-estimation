@@ -28,8 +28,8 @@ class FineTuningTrainingModule(L.LightningModule):
         # waveform operations
         mel_bins: int = 224,
         augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,
-        train_chunking_strategy: Literal['truncate', 'random', 'mean'] = 'truncate',
-        eval_chunking_strategy: Literal['truncate', 'mean'] = 'truncate',
+        train_chunking_strategy: Literal['truncate', 'random', 'mean', 'gru', 'transformer'] = 'mean',
+        eval_chunking_strategy: Literal['truncate', 'mean', 'gru', 'transformer'] = 'mean',
         # learning rate
         lr: float = 3e-5,
         lr_reduction_factor: float = 0.5,
@@ -41,9 +41,11 @@ class FineTuningTrainingModule(L.LightningModule):
     ):
         super().__init__()
 
-        # prepare CNN for regression / binary classification objective
+        # prepare CNN for either regression / binary classification objective
+        # or features extraction for hybrid architectures
         self.cnn = cnn
-        self._replace_last_cnn_layer()
+        cnn_features = 1 if train_chunking_strategy not in ['gru', 'transformer'] else 512
+        self._replace_last_cnn_layer(out_features=cnn_features)
 
         # training configuration
         self.mel_bins = mel_bins
@@ -80,7 +82,7 @@ class FineTuningTrainingModule(L.LightningModule):
 
         self._validate_init()
 
-    def _replace_last_cnn_layer(self):
+    def _replace_last_cnn_layer(self, out_features: int = 1):
         # models with a sequentional layer (e.g., VGG, AlexNet)
         if hasattr(self.cnn, 'classifier') and isinstance(self.cnn.classifier, nn.Sequential):
             # find the last linear layer in the classifier
@@ -92,7 +94,7 @@ class FineTuningTrainingModule(L.LightningModule):
                     in_features = layer.in_features
 
                     # replace the last linear layer
-                    self.cnn.classifier[idx] = nn.Linear(in_features, 1)
+                    self.cnn.classifier[idx] = nn.Linear(in_features, out_features)
 
                     # remove any layers after the replaced linear layer
                     if idx < len(self.cnn.classifier) - 1:
@@ -104,7 +106,7 @@ class FineTuningTrainingModule(L.LightningModule):
                     in_channels = layer.in_channels
 
                     # replace the last Conv2d layer
-                    self.cnn.classifier[idx] = nn.Conv2d(in_channels, 1, kernel_size=1)
+                    self.cnn.classifier[idx] = nn.Conv2d(in_channels, out_features, kernel_size=1)
 
                     # remove any layers after the replaced Conv2d layer
                     if idx < len(self.cnn.classifier) - 1:
@@ -116,12 +118,12 @@ class FineTuningTrainingModule(L.LightningModule):
 
         # models with a linear layer (e.g., Densenet)
         elif hasattr(self.cnn, 'classifier') and isinstance(self.cnn.classifier, nn.Linear):
-            self.cnn.classifier = nn.Linear(self.cnn.classifier.in_features, 1)
+            self.cnn.classifier = nn.Linear(self.cnn.classifier.in_features, out_features)
 
         # models with a fully connected layer (e.g., ResNet)
         elif hasattr(self.cnn, 'fc') and isinstance(self.cnn.fc, nn.Linear):
             in_features = self.cnn.fc.in_features
-            self.cnn.fc = nn.Linear(in_features, 1)
+            self.cnn.fc = nn.Linear(in_features, out_features)
         else:
             raise ValueError(f"Unsupported CNN architecture: {self.cnn.__class__.__name__}")
 
@@ -140,19 +142,31 @@ class FineTuningTrainingModule(L.LightningModule):
                 f'{allowed_augmentations}, got "{self.augmentation}"'
             )
 
-        allowed_train_chunk_strategies = ['truncate', 'random', 'mean']
+        allowed_train_chunk_strategies = ['truncate', 'random', 'mean', 'gru', 'transformer']
         if self.train_chunking_strategy not in allowed_train_chunk_strategies:
             raise ValueError(
                 f'Supported values for `train_chunking_strategy` are '
                 f'{allowed_train_chunk_strategies}, got "{self.train_chunking_strategy}"'
             )
 
-        allowed_eval_chunk_strategies = ['truncate', 'mean']
+        allowed_eval_chunk_strategies = ['truncate', 'mean', 'gru', 'transformer']
         if self.eval_chunking_strategy not in allowed_eval_chunk_strategies:
             raise ValueError(
                 f'Supported values for `eval_chunking_strategy` are '
                 f'{allowed_eval_chunk_strategies}, got "{self.eval_chunking_strategy}"'
             )
+
+        chunking_strategy_mismatch_e = ValueError(
+            f'When instantiating {self.__class__.__name__} in hybrid setup '
+            f'train and eval chunking strategies must match. Got '
+            f'train_chunking_strategy={self.train_chunking_strategy}, '
+            f'eval_chunking_strategy={self.eval_chunking_strategy}.'
+        )
+        if self.train_chunking_strategy != self.eval_chunking_strategy:
+            if self.train_chunking_strategy in ['gru', 'transformer']:
+                raise chunking_strategy_mismatch_e
+            if self.eval_chunking_strategy in ['gru', 'transformer']:
+                raise chunking_strategy_mismatch_e
 
         allowed_optimizers = ['AdamW', 'SGD']
         if self.optimizer not in allowed_optimizers:
