@@ -39,7 +39,9 @@ class FineTuningTrainingModule(L.LightningModule):
         # compute
         compute_batch_size: int = 256,
         # hybrid setup
-        hybrid_setup_cnn_features: int = 512, 
+        hybrid_setup_cnn_features: int = 512,
+        transformer_nhead: int = 1,
+        transformer_dropout: float = 0.1,
     ):
         super().__init__()
 
@@ -48,6 +50,15 @@ class FineTuningTrainingModule(L.LightningModule):
         self.cnn = cnn
         cnn_features = 1 if train_chunking_strategy not in ['gru', 'transformer'] else hybrid_setup_cnn_features
         self._replace_last_cnn_layer(out_features=cnn_features)
+
+        # prepare transformer for hybrid setup if needed
+        if train_chunking_strategy == 'transformer':
+            self.transformer = nn.TransformerEncoderLayer(
+                d_model=hybrid_setup_cnn_features, 
+                nhead=transformer_nhead, 
+                dropout=transformer_dropout,
+                batch_first=True,
+            )
 
         # training configuration
         self.mel_bins = mel_bins
