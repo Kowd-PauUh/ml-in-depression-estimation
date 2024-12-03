@@ -43,8 +43,8 @@ def repeated_fine_tune_cnn(
     # spectrogram
     mel_bins: int = 224,
     augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,
-    train_chunking_strategy: Literal['truncate', 'random', 'mean'] = 'truncate',
-    eval_chunking_strategy: Literal['truncate', 'mean'] = 'truncate',
+    train_chunking_strategy: Literal['truncate', 'random', 'mean'] = 'mean',
+    eval_chunking_strategy: Literal['truncate', 'mean'] = 'mean',
     # training
     max_epochs: int = 10,
     min_epochs: int = 1,
