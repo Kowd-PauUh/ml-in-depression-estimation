@@ -4,8 +4,8 @@ model_name="resnet18"
 objective="regression"
 augmentation_space="weak moderate"
 batch_size=16
-train_chunking_strategy="random"
-eval_chunking_strategy="truncate"
+train_chunking_strategy="mean"
+eval_chunking_strategy="mean"
 ram_optimized_mode=False
 max_epochs=30
 
