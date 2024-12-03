@@ -27,6 +27,7 @@ class FineTuningTrainingModule(L.LightningModule):
         *,
         # waveform operations
         mel_bins: int = 224,
+        mel_length: int = 3072,
         augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,
         train_chunking_strategy: Literal['truncate', 'random', 'mean', 'gru', 'transformer'] = 'mean',
         eval_chunking_strategy: Literal['truncate', 'mean', 'gru', 'transformer'] = 'mean',
@@ -40,7 +41,7 @@ class FineTuningTrainingModule(L.LightningModule):
         compute_batch_size: int = 256,
         # hybrid setup
         hybrid_setup_cnn_features: int = 512,
-        transformer_nhead: int = 1,
+        transformer_nhead: int = 2,
         transformer_dropout: float = 0.1,
     ):
         super().__init__()
@@ -48,10 +49,13 @@ class FineTuningTrainingModule(L.LightningModule):
         # prepare CNN for either regression / binary classification objective
         # or features extraction for hybrid architectures
         self.cnn = cnn
+        self.hybrid_setup_cnn_features = hybrid_setup_cnn_features
         cnn_features = 1 if train_chunking_strategy not in ['gru', 'transformer'] else hybrid_setup_cnn_features
         self._replace_last_cnn_layer(out_features=cnn_features)
 
         # prepare transformer for hybrid setup if needed
+        self.transformer_nhead = transformer_nhead
+        self.transformer_dropout = transformer_dropout
         if train_chunking_strategy == 'transformer':
             self.transformer = nn.TransformerEncoderLayer(
                 d_model=hybrid_setup_cnn_features, 
@@ -59,9 +63,11 @@ class FineTuningTrainingModule(L.LightningModule):
                 dropout=transformer_dropout,
                 batch_first=True,
             )
+            self.linear = nn.Linear(hybrid_setup_cnn_features, 1)
 
         # training configuration
         self.mel_bins = mel_bins
+        self.mel_length = mel_length
         self.objective = objective
         if self.objective == 'classification':
             self.loss_fn = nn.BCEWithLogitsLoss()
@@ -190,18 +196,23 @@ class FineTuningTrainingModule(L.LightningModule):
 
         # save hyperparams
         self.save_hyperparameters(
-            'objective', 'mel_bins', 
+            'objective', 'mel_bins', 'mel_length',
             'augmentation', 'train_chunking_strategy', 
             'eval_chunking_strategy', 'lr_patience',
-            'lr', 'lr_reduction_factor', 'optimizer'
+            'lr', 'lr_reduction_factor', 'optimizer',
+            'compute_batch_size', 'hybrid_setup_cnn_features',
+            'transformer_nhead', 'transformer_dropout'
         )
         logger.info(
             f'Training {self.cnn.__class__.__name__} with {self.objective} objective '
-            f'and {self.optimizer} optimizer '
-            f'(mel_bins = {self.mel_bins}, augmentation = {self.augmentation}, '
+            f'and {self.optimizer} optimizer: (mel_bins = {self.mel_bins}, '
+            f'mel_length = {self.mel_length}, augmentation = {self.augmentation}, '
             f'train_chunking_strategy = {self.train_chunking_strategy}, '
             f'eval_chunking_strategy = {self.eval_chunking_strategy}, lr = {self.lr}, '
-            f'lr_reduction_factor = {self.lr_reduction_factor}, lr_patience = {self.lr_patience})'
+            f'lr_reduction_factor = {self.lr_reduction_factor}, lr_patience = {self.lr_patience}, '
+            f'compute_batch_size = {self.compute_batch_size}, '
+            f'hybrid_setup_cnn_features = {self.hybrid_setup_cnn_features}, '
+            f'transformer_nhead = {self.transformer_nhead}, transformer_dropout = {self.transformer_dropout})'
         )
 
     def _apply_augmentation(
@@ -325,6 +336,28 @@ class FineTuningTrainingModule(L.LightningModule):
 
         return forward_pass_result_per_chunk
 
+    def _transformer_forward(self, features: Tuple[torch.Tensor]) -> torch.Tensor:
+        # `features` is a batch of tensors each of shape (num_chunks, cnn_features) 
+        batch = features
+
+        # pad items in batch to the maximum length
+        max_len = self.mel_length // self.mel_bins
+        padded_batch = torch.stack([
+            nn.functional.pad(seq, (0, 0, 0, max_len - seq.size(0))) for seq in batch
+        ])
+
+        # create the attention mask
+        sequence_lengths = torch.tensor([seq.size(0) for seq in batch])
+        attention_mask = torch.arange(max_len).expand(len(batch), max_len) >= sequence_lengths.unsqueeze(1)
+        attention_mask = attention_mask.to(padded_batch.device)
+
+        # feed the padded batch through the transformer encoder layer
+        # and average the outputs per sequence
+        output = self.transformer(padded_batch, src_key_padding_mask=attention_mask)
+        output = torch.mean(output, dim=1)
+
+        return output
+
     def forward(self, waveforms: List[Tuple[torch.Tensor, int]], eval_mode: bool = True):
         chunking_strategy = self.eval_chunking_strategy if eval_mode else self.train_chunking_strategy
 
@@ -347,6 +380,17 @@ class FineTuningTrainingModule(L.LightningModule):
                     for chunk_scores in scores
                 ]
             )
+
+        # forward pass with transformer
+        if chunking_strategy == 'transformer':
+            # feed with chunking through CNN
+            features = self._forward_pass_with_chunking(mel_spectrograms)
+
+            # feed through transformer
+            features = self._transformer_forward(features)
+
+            # classification / regression on features from transformer
+            return self.linear(features)
 
         # forward pass on single chunk
         if chunking_strategy == 'truncate':
