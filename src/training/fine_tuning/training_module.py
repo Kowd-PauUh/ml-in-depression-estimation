@@ -286,9 +286,8 @@ class FineTuningTrainingModule(L.LightningModule):
         # feed through features extractor using `self.compute_batch_size`
         forward_pass_result = []
         for i in range(math.ceil(len(all_chunks) / self.compute_batch_size)):
-            print(i)
             forward_pass_result.append(
-                module._forward_pass(
+                self._forward_pass(
                     all_chunks[i*self.compute_batch_size:(i + 1)*self.compute_batch_size]
                 )
             )
