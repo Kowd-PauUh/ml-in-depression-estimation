@@ -38,13 +38,15 @@ class FineTuningTrainingModule(L.LightningModule):
         optimizer: Literal['AdamW', 'SGD'] = 'AdamW',
         # compute
         compute_batch_size: int = 256,
+        # hybrid setup
+        hybrid_setup_cnn_features: int = 512, 
     ):
         super().__init__()
 
         # prepare CNN for either regression / binary classification objective
         # or features extraction for hybrid architectures
         self.cnn = cnn
-        cnn_features = 1 if train_chunking_strategy not in ['gru', 'transformer'] else 512
+        cnn_features = 1 if train_chunking_strategy not in ['gru', 'transformer'] else hybrid_setup_cnn_features
         self._replace_last_cnn_layer(out_features=cnn_features)
 
         # training configuration
