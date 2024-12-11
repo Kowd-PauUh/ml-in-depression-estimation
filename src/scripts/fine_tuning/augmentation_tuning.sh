@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# training params
 model_name="resnet18"
 objective="regression"
 augmentation_space="None weak moderate strong mixed"
