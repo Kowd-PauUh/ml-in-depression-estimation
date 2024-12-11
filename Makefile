@@ -27,8 +27,11 @@ stop:
 shell: 
 	docker exec -it ${PROJECT_NAME}-pythonenv /bin/sh -c "/entrypoint.sh bash"
 
-# app:
-# 	docker exec -it ${PROJECT_NAME}-pythonenv /bin/sh -c "/entrypoint.sh app"
+mlflow:
+	docker exec -it ${PROJECT_NAME}-pythonenv /bin/sh -c \
+	"/entrypoint.sh mlflow server --host=0.0.0.0 --port=1234 \
+	--backend-store-uri $(PROJECT_DIR)/data/mlruns \
+	--artifacts-destination $(PROJECT_DIR)/data/mlartifacts"
 
 notebook:
 	docker exec -it ${PROJECT_NAME}-pythonenv /bin/sh -c "/entrypoint.sh notebook"
