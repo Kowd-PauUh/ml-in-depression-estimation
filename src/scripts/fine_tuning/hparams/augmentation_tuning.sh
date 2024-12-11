@@ -16,7 +16,7 @@ n_folds=5
 n_repetitions=2
 
 for augmentation in $augmentation_space; do
-    python3 $PROJECT_DIR/src/scripts/repeated_fine_tune_cnn.py \
+    python3 $PROJECT_DIR/src/scripts/fine_tuning/repeated_fine_tune_cnn.py \
       --model_name=${model_name} \
       --objective=${objective} \
       --train_chunking_strategy=${train_chunking_strategy} \
