@@ -6,7 +6,7 @@ from time import time
 import sklearn
 from sklearn.utils import all_estimators
 from sklearn.model_selection import KFold
-from sklearn.metrics import precision_recall_fscore_support, mean_squared_error, r2_score
+from sklearn.metrics import precision_recall_fscore_support, mean_absolute_error, r2_score
 from tqdm.auto import tqdm
 import pandas as pd
 import fire
@@ -153,7 +153,7 @@ def train_sklearn_model(
                     y_train, y_train_pred, beta=2, average='binary'
                 )
             elif objective == 'regression':
-                train_mse = mean_squared_error(y_train, y_train_pred)
+                train_mae = mean_absolute_error(y_train, y_train_pred)
                 train_r2 = r2_score(y_train, y_train_pred)
 
             # validate the model
@@ -163,7 +163,7 @@ def train_sklearn_model(
                     y_val, y_val_pred, beta=2, average='binary'
                 )
             elif objective == 'regression':
-                val_mse = mean_squared_error(y_val, y_val_pred)
+                val_mae = mean_absolute_error(y_val, y_val_pred)
                 val_r2 = r2_score(y_val, y_val_pred)
 
             # test the model
@@ -173,7 +173,7 @@ def train_sklearn_model(
                     y_test, y_test_pred, beta=2, average='binary'
                 )
             elif objective == 'regression':
-                test_mse = mean_squared_error(y_test, y_test_pred)
+                test_mae = mean_absolute_error(y_test, y_test_pred)
                 test_r2 = r2_score(y_test, y_test_pred)
 
             # log metrics to MLFlow
@@ -191,7 +191,7 @@ def train_sklearn_model(
                 if objective == 'classification':
                     mlflow.log_metric('train_precision_epoch', train_precision)
                     mlflow.log_metric('train_recall_epoch', train_recall)
-                    mlflow.log_metric('train_f2_epoch', train_f2)
+                    mlflow.log_metric('train_f2_epoch', train_f_score)
                     mlflow.log_metric('val_precision_epoch', val_precision)
                     mlflow.log_metric('val_recall_epoch', val_recall)
                     mlflow.log_metric('val_f2_epoch', val_f_score)
@@ -199,11 +199,11 @@ def train_sklearn_model(
                     mlflow.log_metric('test_recall_epoch', test_recall)
                     mlflow.log_metric('test_f2_epoch', test_f_score)
                 elif objective == 'regression':
-                    mlflow.log_metric('train_mse_epoch', train_mse)
+                    mlflow.log_metric('train_mae_epoch', train_mae)
                     mlflow.log_metric('train_r2_epoch', train_r2)
-                    mlflow.log_metric('val_mse_epoch', val_mse)
+                    mlflow.log_metric('val_mae_epoch', val_mae)
                     mlflow.log_metric('val_r2_epoch', val_r2)
-                    mlflow.log_metric('test_mse_epoch', test_mse)
+                    mlflow.log_metric('test_mae_epoch', test_mae)
                     mlflow.log_metric('test_r2_epoch', test_r2)
 
 
