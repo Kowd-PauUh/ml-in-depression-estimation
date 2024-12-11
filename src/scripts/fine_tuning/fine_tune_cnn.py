@@ -258,6 +258,7 @@ def main(
     model_name: str,
     objective: str,
     pretrained: bool = True,
+    tags: dict = {},
     **kwargs
 ):
     cnn = get_model(model_name, pretrained)
@@ -267,7 +268,7 @@ def main(
         tags={
             'model_name': model_name,
             'pretrained': str(pretrained),
-        },
+        } | tags,
         **kwargs
     )
 
