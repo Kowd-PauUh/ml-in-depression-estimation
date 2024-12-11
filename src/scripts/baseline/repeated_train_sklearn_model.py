@@ -7,6 +7,7 @@ import sklearn
 from sklearn.utils import all_estimators
 from sklearn.model_selection import KFold
 from sklearn.metrics import precision_recall_fscore_support, mean_absolute_error, r2_score
+from sklearn.decomposition import PCA
 from tqdm.auto import tqdm
 import pandas as pd
 import fire
@@ -35,11 +36,13 @@ def train_sklearn_model(
     objective: str,
     features: List[
         Literal['Glottal', 'Phonation', 'Prosody', 'Other', 'Articulation', 'RepLearning']
-    ] = ['Glottal', 'Phonation', 'Prosody', 'Other', 'Articulation'],
+    ] = ['Glottal', 'Phonation', 'Prosody', 'Other', 'Articulation', 'RepLearning'],
     tags: dict = {},
     # cross-validation
     n_folds: int = 5,
     n_repetitions: int = 2,
+    # features reduction
+    n_components: int | float = 0.8,
     # sklearn model kwargs
     **kwargs
 ):
@@ -53,13 +56,13 @@ def train_sklearn_model(
     else:
         raise ValueError(f'Supported objectives are: "regression", "classification". Got "{objective}"')
 
-    # model
-    sklearn_model = [
+    # model cls
+    sklearn_model_cls = [
         estimator for estimator_name, estimator in all_estimators(type_filter=type_filter) 
         if estimator_name == model_name
     ]
-    if sklearn_model:
-        sklearn_model = sklearn_model[0](**kwargs)
+    if sklearn_model_cls:
+        sklearn_model_cls = sklearn_model_cls[0]
     else:
         raise ValueError(f'Sklearn estimator "{model_name}" ({type_filter=}) does not exist.')
 
@@ -107,8 +110,10 @@ def train_sklearn_model(
         train_hparams = {
             'model_name': model_name,
             'objective': objective,
+            'features': features,
             'n_folds': n_folds,
             'n_repetitions': n_repetitions,
+            'n_components': n_components,
             'seed': seed,
             **kwargs
         }
@@ -122,13 +127,13 @@ def train_sklearn_model(
         folds = kfold.split(groups.index)
 
         for train_groups_idx, val_groups_idx in folds:
+            # initialize model
+            sklearn_model = sklearn_model_cls(**kwargs)
+
             # split dataset by 'participant_id' according to fold
             train_groups, val_groups = groups.index[train_groups_idx], groups.index[val_groups_idx]
             train_df = train_val_df[train_val_df['participant_id'].isin(train_groups)]
             val_df = train_val_df[train_val_df['participant_id'].isin(val_groups)]
-
-            # TODO:
-            # implement features reduction
 
             # train dataset
             X_train = train_val_features_df.loc[train_df.index].reset_index(drop=True)
@@ -144,6 +149,13 @@ def train_sklearn_model(
             X_test = test_features_df
             X_test = (X_test - X_train_means) / X_train_stds  # standardize using train means and stds
             y_test = test_df[dependent_variable].to_numpy().astype(int)
+
+            # features reduction
+            if n_components:
+                pca = PCA(n_components=n_components, random_state=seed)
+                X_train = pca.fit_transform(X_train)
+                X_val = pca.transform(X_val)
+                X_test = pca.transform(X_test)
 
             # train the model
             sklearn_model.fit(X_train, y_train)
