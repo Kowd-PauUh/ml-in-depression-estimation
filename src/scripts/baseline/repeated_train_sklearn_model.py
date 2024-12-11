@@ -94,13 +94,13 @@ def train_sklearn_model(
     for features_name in features_paths.keys():
         # train features
         path = features_paths[features_name]['train']
-        features = pd.read_csv(path).reset_index(drop=True)
-        train_val_features_df = pd.concat([train_val_features_df, features], axis=1)
+        features_df = pd.read_csv(path).reset_index(drop=True)
+        train_val_features_df = pd.concat([train_val_features_df, features_df], axis=1)
 
         # test features
         path = features_paths[features_name]['test']
-        features = pd.read_csv(path).reset_index(drop=True)
-        test_features_df = pd.concat([test_features_df, features], axis=1)
+        features_df = pd.read_csv(path).reset_index(drop=True)
+        test_features_df = pd.concat([test_features_df, features_df], axis=1)
 
     # some of the features may be missing, we fill them with train dataset median
     train_val_features_df = train_val_features_df.fillna(train_val_features_df.median())
