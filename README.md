@@ -5,7 +5,7 @@
 - Explore other available `make` commands (targets) in `Makefile`
 
 ## Data download
-Data used in this repository is a part of the Extended DAIC-WOZ Database [1, 2] and can only be posessed after completing End-User License Agreement. For detailed information email `daicwoz@ict.usc.edu`. After you've obtained an access to the database you can run `src/scripts/download_data.sh` and `src/scripts/download_metadata.sh` scripts from terminal.
+Data used in this repository is a part of the Extended DAIC-WOZ Database [1, 2] and can only be posessed after completing End-User License Agreement. For detailed information email `daicwoz@ict.usc.edu`. After you've obtained an access to the database you can run `src/scripts/data/download_data.sh` and `src/scripts/data/download_metadata.sh` scripts from terminal.
 
 Voice recording example `data/OSR_us_000_0030_8k.wav` used in notebooks is taken from Open Speech Repository.
 
