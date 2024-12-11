@@ -40,6 +40,12 @@ def fine_tune_cnn(
     augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,
     train_chunking_strategy: Literal['truncate', 'random', 'mean'] = 'mean',
     eval_chunking_strategy: Literal['truncate', 'mean'] = 'mean',
+    # compute
+    compute_batch_size: int = 256,
+    # hybrid setup
+    hybrid_setup_cnn_features: int = 512,
+    transformer_nhead: int = 2,
+    transformer_dropout: float = 0.1,
     # training
     max_epochs: int = 10,
     min_epochs: int = 1,
@@ -78,6 +84,10 @@ def fine_tune_cnn(
         lr_reduction_factor=lr_reduction_factor,
         lr_patience=lr_patience,
         optimizer=optimizer,
+        compute_batch_size=compute_batch_size,
+        hybrid_setup_cnn_features=hybrid_setup_cnn_features,
+        transformer_nhead=transformer_nhead,
+        transformer_dropout=transformer_dropout,
     ).to(DEVICE)
     data_module = FineTuningDataModule(
         target_column_name=target_column_name,
@@ -121,6 +131,10 @@ def fine_tune_cnn(
         'augmentation': augmentation,
         'train_chunking_strategy': train_chunking_strategy,
         'eval_chunking_strategy': eval_chunking_strategy,
+        'compute_batch_size': compute_batch_size,
+        'hybrid_setup_cnn_features': hybrid_setup_cnn_features,
+        'transformer_nhead': transformer_nhead,
+        'transformer_dropout': transformer_dropout,
         'max_epochs': max_epochs,
         'min_epochs': min_epochs,
         'lr_reduction_factor': lr_reduction_factor,
