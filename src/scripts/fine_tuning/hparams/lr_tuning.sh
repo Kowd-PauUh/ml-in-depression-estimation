@@ -27,5 +27,6 @@ for lr in $lr_space; do
       --augmentation=${augmentation} \
       --lr=${lr} \
       --n_folds=${n_folds} \
-      --n_repetitions=${n_repetitions}
+      --n_repetitions=${n_repetitions} \
+      --tags="{\"tuned_hparam\":\"lr\"}"
 done

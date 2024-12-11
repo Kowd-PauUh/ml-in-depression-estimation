@@ -27,5 +27,6 @@ for batch_size in $batch_size_space; do
       --augmentation=${augmentation} \
       --lr=${lr} \
       --n_folds=${n_folds} \
-      --n_repetitions=${n_repetitions}
+      --n_repetitions=${n_repetitions} \
+      --tags="{\"tuned_hparam\":\"batch_size\"}"
 done
