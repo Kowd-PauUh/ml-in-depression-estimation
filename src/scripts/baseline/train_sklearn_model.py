@@ -1,19 +1,32 @@
 import os
 from typing import List, Literal
 from pathlib import Path
+from time import time
 
 import sklearn
 from sklearn.utils import all_estimators
 from sklearn.model_selection import KFold
-from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import precision_recall_fscore_support, mean_squared_error, r2_score
 from tqdm.auto import tqdm
 import pandas as pd
 import fire
+import mlflow
 
+
+EXPERIMENT_NAME = 'Sklearn model repeated'
 
 PROJECT_DIR = Path(os.environ['PROJECT_DIR'])
 PREPROCESSED_DATA_PATH = PROJECT_DIR / 'data/preprocessed_data'
 PROCESSED_DATA_PATH = PROJECT_DIR / 'data/processed_data'
+
+mlflow.set_tracking_uri(os.environ['MLFLOW_TRACKING_URI'])
+timestamp = str(time()).replace('.', '')
+
+
+def standardize_columns(df):
+    means = df.mean()
+    stds = df.std()
+    return (df - means) / stds, means, stds
 
 
 def train_sklearn_model(
@@ -37,6 +50,8 @@ def train_sklearn_model(
     elif objective == 'classification':
         dependent_variable = 'phq_binary'
         type_filter = 'classifier'
+    else:
+        raise ValueError(f'Supported objectives are: "regression", "classification". Got "{objective}"')
 
     # model
     sklearn_model = [
@@ -44,7 +59,7 @@ def train_sklearn_model(
         if estimator_name == model_name
     ]
     if sklearn_model:
-        sklearn_model = sklearn_model[0]
+        sklearn_model = sklearn_model[0](**kwargs)
     else:
         raise ValueError(f'Sklearn estimator "{model_name}" ({type_filter=}) does not exist.')
 
@@ -89,6 +104,15 @@ def train_sklearn_model(
     test_features_df = test_features_df.fillna(train_val_features_df.median())
 
     for seed in range(n_repetitions):
+        train_hparams = {
+            'model_name': model_name,
+            'objective': objective,
+            'n_folds': n_folds,
+            'n_repetitions': n_repetitions,
+            'seed': seed,
+            **kwargs
+        }
+
         # group stratified split for train and val df
         groups = train_val_df.groupby('participant_id').first()
         groups = groups.sample(frac=1, random_state=seed)
@@ -118,9 +142,66 @@ def train_sklearn_model(
             X_test = (X_test - X_train_means) / X_train_stds  # standardize using train means and stds
             y_test = test_df[dependent_variable].to_numpy().astype(int)
 
-            # TODO:
-            # 1. Implement model training, validation and tests
-            # 2. Implement metrics logging to MLFlow 
+            # train the model
+            sklearn_model.fit(X_train, y_train)
+            y_train_pred = sklearn_model.predict(X_train)
+            if objective == 'classification':
+                train_precision, train_recall, train_f_score, _ = precision_recall_fscore_support(
+                    y_train, y_train_pred, beta=2, average='binary'
+                )
+            elif objective == 'regression':
+                train_mse = mean_squared_error(y_train, y_train_pred)
+                train_r2 = r2_score(y_train, y_train_pred)
+
+            # validate the model
+            y_val_pred = sklearn_model.predict(X_val)
+            if objective == 'classification':
+                val_precision, val_recall, val_f_score, _ = precision_recall_fscore_support(
+                    y_val, y_val_pred, beta=2, average='binary'
+                )
+            elif objective == 'regression':
+                val_mse = mean_squared_error(y_val, y_val_pred)
+                val_r2 = r2_score(y_val, y_val_pred)
+
+            # test the model
+            y_test_pred = sklearn_model.predict(X_test)
+            if objective == 'classification':
+                test_precision, test_recall, test_f_score, _ = precision_recall_fscore_support(
+                    y_test, y_test_pred, beta=2, average='binary'
+                )
+            elif objective == 'regression':
+                test_mse = mean_squared_error(y_test, y_test_pred)
+                test_r2 = r2_score(y_test, y_test_pred)
+
+            # log metrics to MLFlow
+            mlflow.set_experiment(EXPERIMENT_NAME)
+            with mlflow.start_run(
+                run_name=model_name, 
+                tags={
+                    'experiment_name': EXPERIMENT_NAME,
+                    'cross_validation': timestamp,
+                    **tags,
+                }
+            ):
+                mlflow.log_params(train_hparams)
+
+                if objective == 'classification':
+                    mlflow.log_metric('train_precision_epoch', train_precision)
+                    mlflow.log_metric('train_recall_epoch', train_recall)
+                    mlflow.log_metric('train_f2_epoch', train_f2)
+                    mlflow.log_metric('val_precision_epoch', val_precision)
+                    mlflow.log_metric('val_recall_epoch', val_recall)
+                    mlflow.log_metric('val_f2_epoch', val_f_score)
+                    mlflow.log_metric('test_precision_epoch', test_precision)
+                    mlflow.log_metric('test_recall_epoch', test_recall)
+                    mlflow.log_metric('test_f2_epoch', test_f_score)
+                elif objective == 'regression':
+                    mlflow.log_metric('train_mse_epoch', train_mse)
+                    mlflow.log_metric('train_r2_epoch', train_r2)
+                    mlflow.log_metric('val_mse_epoch', val_mse)
+                    mlflow.log_metric('val_r2_epoch', val_r2)
+                    mlflow.log_metric('test_mse_epoch', test_mse)
+                    mlflow.log_metric('test_r2_epoch', test_r2)
 
 
 if __name__ == "__main__":
