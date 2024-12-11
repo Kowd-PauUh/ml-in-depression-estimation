@@ -127,6 +127,9 @@ def train_sklearn_model(
             train_df = train_val_df[train_val_df['participant_id'].isin(train_groups)]
             val_df = train_val_df[train_val_df['participant_id'].isin(val_groups)]
 
+            # TODO:
+            # implement features reduction
+
             # train dataset
             X_train = train_val_features_df.loc[train_df.index].reset_index(drop=True)
             X_train, X_train_means, X_train_stds = standardize_columns(X_train)  # standardize
