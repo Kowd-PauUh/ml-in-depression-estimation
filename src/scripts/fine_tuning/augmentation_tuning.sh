@@ -5,6 +5,7 @@ model_name="resnet18"
 objective="regression"
 augmentation_space="None weak moderate strong mixed"
 batch_size=16
+lr="1e-5"
 train_chunking_strategy="transformer"
 eval_chunking_strategy="transformer"
 ram_optimized_mode=False
@@ -24,6 +25,7 @@ for augmentation in $augmentation_space; do
       --ram_optimized_mode=${ram_optimized_mode} \
       --max_epochs=${max_epochs} \
       --augmentation=${augmentation} \
+      --lr=${lr} \
       --n_folds=${n_folds} \
       --n_repetitions=${n_repetitions}
 done
