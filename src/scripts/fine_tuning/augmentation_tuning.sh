@@ -2,10 +2,10 @@
 
 model_name="resnet18"
 objective="regression"
-augmentation_space="weak moderate"
+augmentation_space="None weak moderate strong mixed"
 batch_size=16
-train_chunking_strategy="mean"
-eval_chunking_strategy="mean"
+train_chunking_strategy="transformer"
+eval_chunking_strategy="transformer"
 ram_optimized_mode=False
 max_epochs=30
 
