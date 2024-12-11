@@ -184,6 +184,13 @@ class FineTuningDataModule(L.LightningDataModule):
         train_df = train_val_df[train_val_df[self.grouping_column_name].isin(train_groups)]
         val_df = train_val_df[train_val_df[self.grouping_column_name].isin(val_groups)]
 
+        # you can uncomment the following lines to emulate wrong experimental setup 
+        # where train and val datasets share patients and therefore the model overfits
+        # to the patients instead of learning underlying dependencies in data
+        #
+        # train_df = train_val_df.sample(frac=0.8)
+        # val_df = train_val_df[~train_val_df.index.isin(train_df.index)]
+
         # log stratification results
         logger.info(
             f'Mean target value among splits: '
