@@ -22,6 +22,7 @@ PLOT = False  # whether to create data-related plots
 # lower and upper bounds for audio filtering
 MIN_AUDIO_DURATION = 10  # [s]
 MAX_AUDIO_DURATION = 30  # [s]
+MIN_WORDS_CNT = 10
 
 if __name__ == '__main__':
     # disable warnings
@@ -65,7 +66,7 @@ if __name__ == '__main__':
     filtered_transcripts = transcripts[
         (transcripts['duration'] > MIN_AUDIO_DURATION) & 
         (transcripts['duration'] < MAX_AUDIO_DURATION) & 
-        (transcripts['words_cnt'] > 10)
+        (transcripts['words_cnt'] > MIN_WORDS_CNT)
     ]
     logger.info(f'Total patients preserved: {100 * len(set(filtered_transcripts["id"].unique())) / len(labels):.2f}%')
     logger.info(f'{filtered_transcripts["duration"].sum() / 3600:.2f}h of recodrings in total')
