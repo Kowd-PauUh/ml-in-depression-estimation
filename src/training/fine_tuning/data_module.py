@@ -32,6 +32,7 @@ class FineTuningDataModule(L.LightningDataModule):
         target_column_name: Literal['phq_binary', 'phq_score'] = 'phq_binary',
         train_val_split_name: str = 'train',
         test_split_name: str = 'test',
+        hold_out_test_split: bool = True,
         # preprocessing
         fast_mode: bool = True,
         downsample_to: int | None = None,
@@ -61,6 +62,12 @@ class FineTuningDataModule(L.LightningDataModule):
         self.target_column_name = target_column_name
         self.train_val_split_name = train_val_split_name
         self.test_split_name = test_split_name
+        self.hold_out_test_split = hold_out_test_split
+        if not self.hold_out_test_split:
+            logger.info(
+                'Initialized data module with hold_out_test_split=False. '
+                'Training and validation will be performed on entire data with no test split.'
+            )
 
         # preprocessing
         self.fast_mode = fast_mode
@@ -131,6 +138,8 @@ class FineTuningDataModule(L.LightningDataModule):
 
         # define test dataset
         test_df = df[df[self.split_column_name] == self.test_split_name]
+        if not self.hold_out_test_split:
+            test_df = test_df.iloc[:0]  # empty dataframe
 
         if self.fold_idx is not None and self.n_folds is not None:
             logger.info(
@@ -141,6 +150,8 @@ class FineTuningDataModule(L.LightningDataModule):
 
             # group stratified split for train and val df
             train_val_df = df[df[self.split_column_name] == self.train_val_split_name]
+            if not self.hold_out_test_split:
+                train_val_df = df  # train and validate on entire dataset
             groups = train_val_df.groupby(self.grouping_column_name).first()
             groups = groups.sample(frac=1, random_state=self.seed)
 

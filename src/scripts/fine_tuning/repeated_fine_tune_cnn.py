@@ -40,6 +40,7 @@ def repeated_fine_tune_cnn(
     # dataset
     ram_optimized_mode: bool = True,
     downsample_to: int | None = None,
+    hold_out_test_split: bool = True,
     # spectrogram
     mel_bins: int = 224,
     augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,
@@ -99,6 +100,7 @@ def repeated_fine_tune_cnn(
             data_module = FineTuningDataModule(
                 target_column_name=target_column_name,
                 downsample_to=downsample_to, 
+                hold_out_test_split=hold_out_test_split,
                 batch_size=batch_size, 
                 val_batch_size=val_batch_size,
                 fast_mode=not ram_optimized_mode,
@@ -139,6 +141,7 @@ def repeated_fine_tune_cnn(
                 'evaluate_on_test_split': evaluate_on_test_split,
                 'ram_optimized_mode': ram_optimized_mode,
                 'downsample_to': downsample_to,
+                'hold_out_test_split': hold_out_test_split,
                 'mel_bins': mel_bins,
                 'augmentation': augmentation,
                 'train_chunking_strategy': train_chunking_strategy,
@@ -157,6 +160,7 @@ def repeated_fine_tune_cnn(
                 'patience': patience,
                 'batch_size': batch_size,
                 'val_batch_size': val_batch_size,
+                'cross_validation': timestamp,
                 **tags,
                 **kwargs
             }
