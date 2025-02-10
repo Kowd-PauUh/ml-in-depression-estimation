@@ -2,6 +2,9 @@
 
 export 
 
+
+REQUIREMENTS = stable  # "soft" or "stable"
+
 PROJECT_NAME = $(shell echo $(notdir $(PWD)) | tr A-Z a-z)
 PROJECT_DIR = $(PWD)
 
