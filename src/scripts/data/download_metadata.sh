@@ -2,8 +2,8 @@
 
 base_url="https://dcapswoz.ict.usc.edu/wwwedaic/labels/"
 
-mkdir -p data/raw_data
-cd data/raw_data
+mkdir -p ${PROJECT_DIR}/data/raw_data
+cd ${PROJECT_DIR}/data/raw_data
 
 file_list=$(curl -s $base_url | grep -oP '(?<=href=")[^"]*\.csv')
 
