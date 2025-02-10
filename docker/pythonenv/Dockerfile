@@ -1,9 +1,11 @@
 FROM python:3.10-slim-buster
 
 ARG PROJECT_DIR
+ARG REQUIREMENTS=stable
+# REQUIREMENTS can be "soft" or "stable"
 
 COPY docker/pythonenv/entrypoint.sh /
-COPY docker/pythonenv/requirements.txt /
+COPY docker/pythonenv/requirements-${REQUIREMENTS}.txt /requirements.txt
 COPY src/ ${PROJECT_DIR}/src/
 COPY data/ ${PROJECT_DIR}/data/
 
