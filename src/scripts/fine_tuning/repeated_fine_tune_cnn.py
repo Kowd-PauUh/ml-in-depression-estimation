@@ -16,7 +16,6 @@ import pandas as pd
 from src.training.foundation_models import FOUNDATION_MODELS
 from src.training.fine_tuning.training_module import FineTuningTrainingModule
 from src.training.fine_tuning.data_module import FineTuningDataModule
-from src.training.co2_monitor import CO2Monitor
 from src.training.loss_monitor import LossMonitor
 from src.training.epoch_logging import EpochLogger, MLFlowLoggerAdapter
 
@@ -127,7 +126,6 @@ def repeated_fine_tune_cnn(
             )
             model_checkpoint.CHECKPOINT_JOIN_CHAR = '_'
             model_checkpoint.CHECKPOINT_EQUALS_CHAR = '_'
-            co2_monitor = CO2Monitor()
             loss_monitor = LossMonitor()
             epoch_logger = EpochLogger()
 
@@ -211,7 +209,6 @@ def repeated_fine_tune_cnn(
                     early_stopping, 
                     model_checkpoint, 
                     lr_monitor, 
-                    co2_monitor, 
                     loss_monitor,
                     epoch_logger,
                 ],
@@ -252,7 +249,6 @@ def repeated_fine_tune_cnn(
                 # log artifacts
                 mlflow.log_artifact(model_signature_path)
                 mlflow.log_artifact(execution_command_path)
-                mlflow.log_artifact(co2_monitor.artifact_path)
                 mlflow.log_artifact(loss_monitor.artifact_path)
                 mlflow.log_artifact(train_hparams_path.as_posix())
                 mlflow.log_artifact(Path(csv_logger.log_dir, 'metrics.csv').as_posix())
