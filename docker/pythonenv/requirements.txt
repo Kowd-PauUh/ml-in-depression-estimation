@@ -9,7 +9,6 @@ jupyter
 seaborn
 
 # modelling
-# torch>1.9.0,<2.4.1
 torch==2.0.1
 lightning
 torchaudio
@@ -26,10 +25,6 @@ mlflow
 
 # co2 emission monitoring
 codecarbon==2.6.0
-
-# acoustic features extraction
-git+https://gitlab.com/Kowd-PauUh/disvoice.git
-librosa
 
 # other
 fire
