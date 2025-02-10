@@ -6,6 +6,7 @@ services:
             dockerfile: docker/pythonenv/Dockerfile
             args:
                 PROJECT_DIR: ${PROJECT_DIR}
+                REQUIREMENTS: ${REQUIREMENTS}
         environment:
             - "PROJECT_DIR=${PROJECT_DIR}"
             - "MODELS_DIR=${PROJECT_DIR}/data/models"
