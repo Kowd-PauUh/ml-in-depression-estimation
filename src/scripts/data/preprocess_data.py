@@ -15,7 +15,7 @@ RAW_DATA_PATH = PROJECT_DIR / 'data/raw_data'
 PREPROCESSED_DATA_PATH = PROJECT_DIR / 'data/preprocessed_data'
 PREPROCESSED_DATA_PATH.mkdir(parents=True, exist_ok=True)
 
-PLOT = False  # whether to create data-related plots 
+PLOT = True  # whether to create data-related plots 
 
 # lower and upper bounds for audio filtering
 MIN_AUDIO_DURATION = 10  # [s]
@@ -70,16 +70,21 @@ if __name__ == '__main__':
     logger.info(f'{filtered_transcripts["duration"].sum() / 3600:.2f}h of recodrings in total')
 
     if PLOT:
+        plots_dir = PROJECT_DIR / 'data/figures'
+        os.makedirs(plots_dir, exist_ok=True)
+
         # plot words count histogram
         sns.histplot(filtered_transcripts['words_cnt'])
+        plt.savefig(plots_dir / '00. words_cnt histogram.png')
         plt.show()
 
         # plot words_cnt=f(duration) scatter
         sns.scatterplot(data=filtered_transcripts, x='duration', y='words_cnt')
+        plt.savefig(plots_dir / '01. words_cnt vs duration.png')
         plt.show()
 
         # plot preserved data distribution vs original one
-        for label in ['gender', 'phq_binary', 'phq_score', 'pcl-c (ptsd)', 'ptsd severity']:
+        for i, label in enumerate(['gender', 'phq_binary', 'phq_score', 'pcl-c (ptsd)', 'ptsd severity'], start=2):
             plt.figure(figsize=(6, 2.5))
             sns.histplot(labels[label], bins=10, label='Original dataset')
             sns.histplot(
@@ -88,6 +93,7 @@ if __name__ == '__main__':
                 label='Filtered dataset'
             )
             plt.legend()
+            plt.savefig(plots_dir / f'0{i}. preserved {label}.png')
             plt.show()
 
     # create final df
