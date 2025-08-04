@@ -1,0 +1,18 @@
+services:
+    pythonenv:
+        container_name: ${PROJECT_NAME}-pythonenv
+        build:
+            context: ..
+            dockerfile: docker/pythonenv/Dockerfile
+            args:
+                PROJECT_DIR: ${PROJECT_DIR}
+                REQUIREMENTS: ${REQUIREMENTS}
+        environment:
+            - "PROJECT_DIR=${PROJECT_DIR}"
+            - "MODELS_DIR=${PROJECT_DIR}/data/models"
+            - "MLFLOW_TRACKING_URI=http://0.0.0.0:1234"
+        ports:
+            - "8501:8000"  # jupyter port
+            - "8502:1234"  # mlflow port
+        volumes:
+            - ${PROJECT_DIR}:${PROJECT_DIR}
