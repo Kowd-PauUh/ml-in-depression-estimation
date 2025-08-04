@@ -1,0 +1,93 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36" version="28.0.7">
+  <diagram name="Page-1" id="AcgcW_brWqlfK4vuXaut">
+    <mxGraphModel dx="1209" dy="642" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="W_HRlakQyIaq2_ud1TEQ-1" target="W_HRlakQyIaq2_ud1TEQ-3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-1" value="Initial dataset&lt;div&gt;422 paper&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="240" y="210" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startFill=1;startArrow=classic;" parent="1" source="W_HRlakQyIaq2_ud1TEQ-2" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="300" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-2" value="Remove duplicates&lt;div&gt;77 papers&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="380" y="250" width="130" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="W_HRlakQyIaq2_ud1TEQ-3" target="W_HRlakQyIaq2_ud1TEQ-9" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-3" value="Papers for title and abstract screening&lt;div&gt;345&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp;papers&lt;/span&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="240" y="290" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;endArrow=none;" parent="1" source="W_HRlakQyIaq2_ud1TEQ-4" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="299.9999999999998" y="365" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-4" value="Irrelevant title&amp;nbsp;&lt;div&gt;and/or abstract&lt;div&gt;231 papers&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="380" y="340" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="W_HRlakQyIaq2_ud1TEQ-9" target="W_HRlakQyIaq2_ud1TEQ-11" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-9" value="Papers for full-text screening&lt;div&gt;106 papers&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="240" y="492" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="fQ9zKUB4HCehQB5npPaW-2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="W_HRlakQyIaq2_ud1TEQ-11" target="fQ9zKUB4HCehQB5npPaW-1" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-11" value="Papers for quality review&lt;div&gt;56 papers&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="240" y="592" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-16" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=0;entryDy=0;endArrow=none;startFill=0;" parent="1" source="W_HRlakQyIaq2_ud1TEQ-14" target="W_HRlakQyIaq2_ud1TEQ-15" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-17" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;endArrow=none;startFill=0;" parent="1" source="W_HRlakQyIaq2_ud1TEQ-14" target="W_HRlakQyIaq2_ud1TEQ-15" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;endArrow=none;" parent="1" source="W_HRlakQyIaq2_ud1TEQ-14" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="299.9999999999998" y="567" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-14" value="Ineligible after&amp;nbsp;&lt;div&gt;full-text review&lt;br&gt;&lt;div&gt;50 papers&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="380" y="542" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-15" value="&lt;blockquote style=&quot;margin: 0px 0px 0px 10px; border: none; padding: 0px;&quot;&gt;&lt;div&gt;Does not regard DAIC-WOZ dataset: 34&lt;/div&gt;&lt;div&gt;Does not use Mean Absolute Error&amp;nbsp;&lt;/div&gt;&lt;div&gt;(MAE) to assess estimation quality: 1&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Does not introduce a new model&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;or repurposes an existing model: 9&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Not in English: 6&lt;/span&gt;&lt;/div&gt;&lt;/blockquote&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;" parent="1" vertex="1">
+          <mxGeometry x="530" y="472" width="240" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="fQ9zKUB4HCehQB5npPaW-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;endArrow=none;" parent="1" source="W_HRlakQyIaq2_ud1TEQ-18" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="300" y="667" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-18" value="Ineligible after&amp;nbsp;&lt;div&gt;quality review&lt;br&gt;&lt;div&gt;49 papers&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="380" y="642" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="fQ9zKUB4HCehQB5npPaW-1" value="Papers included in our review&lt;div&gt;7 papers&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="240" y="692" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="JVogDqIXSGi4d4kN093v-1" value="Records sought for retrieval&lt;div&gt;108&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="240" y="392" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="JVogDqIXSGi4d4kN093v-2" value="Irrelevant title&amp;nbsp;&lt;div&gt;and/or abstract&lt;div&gt;237&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp;papers&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="380" y="340" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="JVogDqIXSGi4d4kN093v-4" value="Records not retrieved&lt;div&gt;2&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="380" y="442" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="JVogDqIXSGi4d4kN093v-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;endArrow=none;" parent="1" source="JVogDqIXSGi4d4kN093v-4" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="300" y="467" as="targetPoint" />
+            <mxPoint x="380" y="466.65999999999997" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
