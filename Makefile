@@ -21,6 +21,9 @@ build:
 start:
 	docker compose -f docker/docker-compose.yml -p $(PROJECT_NAME) up -d
 
+start-cpu:
+	docker compose -f docker/docker-compose.cpu.yml -p $(PROJECT_NAME) up -d
+
 restart:
 	make stop && make build && make start
 
