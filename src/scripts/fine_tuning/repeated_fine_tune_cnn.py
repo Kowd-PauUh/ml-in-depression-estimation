@@ -30,7 +30,8 @@ timestamp = str(time()).replace('.', '')
 
 
 def repeated_fine_tune_cnn(
-    cnn,
+    model_name: str,
+    pretrained: bool,
     objective: Literal['classification', 'regression'],
     evaluate_on_test_split: bool = True,
     # cross-validation
@@ -75,10 +76,11 @@ def repeated_fine_tune_cnn(
             f'["classification", "regression"], got "{objective}"'
         )
 
-    model_name = f'{cnn.__class__.__name__}/{objective}'
-
     for seed in range(n_repetitions):
         for fold_idx in range(n_folds):
+            # initialize model
+            cnn = get_model(model_name, pretrained)
+
             # modules
             model = FineTuningTrainingModule(
                 cnn=cnn, 
@@ -132,7 +134,9 @@ def repeated_fine_tune_cnn(
             # save training hyperparams
             train_hparams = {
                 'task': 'fine-tuning',
-                'cnn': cnn.__class__.__name__,
+                'model_name': model_name,
+                'model_class_name': cnn.__class__.__name__,
+                'pretrained': str(pretrained),
                 'objective': objective,
                 'n_folds': n_folds,
                 'n_repetitions': n_repetitions,
@@ -273,18 +277,15 @@ def get_model(model_name: str, pretrained: bool):
 def main(
     model_name: str,
     objective: str,
-    pretrained: bool = True,
+    pretrained: bool = False,
     tags: dict = {},
     **kwargs
 ):
-    cnn = get_model(model_name, pretrained)
     repeated_fine_tune_cnn(
-        cnn=cnn,
+        model_name=model_name,
+        pretrained=pretrained,
         objective=objective,
-        tags={
-            'model_name': model_name,
-            'pretrained': str(pretrained),
-        } | tags,
+        tags=tags,
         **kwargs
     )
 
