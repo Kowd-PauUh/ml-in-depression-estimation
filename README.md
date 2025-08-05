@@ -1,5 +1,13 @@
 # Common Pitfalls and Recommendations for Use of Machine Learning in Depression Severity Estimation: DAIC-WOZ Study
 
+## PRISMA flowchart
+
+![PRISMA Flowchart](paper/figures/flowchart/flowchart.svg)
+
+## Empirical demonstration of subject leakage pitfall
+
+![Architecture](paper/figures/architecture/architecture.svg)
+
 ## Steps to reproduce
 
 Below is the list of steps required to reproduce the results of our paper from scratch:
