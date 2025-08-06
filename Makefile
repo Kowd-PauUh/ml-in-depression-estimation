@@ -40,7 +40,8 @@ mlflow:
 	--artifacts-destination $(PROJECT_DIR)/data/mlartifacts"
 
 notebook:
-	docker exec -it ${PROJECT_NAME}-pythonenv /bin/sh -c "/entrypoint.sh notebook"
+	docker exec -it ${PROJECT_NAME}-pythonenv /bin/sh -c \
+	"/entrypoint.sh jupyter lab --port=8000 --ip=0.0.0.0 --NotebookApp.token='' --allow-root"
 
 config: FORCE
 	make env && docker compose -f docker/docker-compose.yml config
