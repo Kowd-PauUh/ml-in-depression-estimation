@@ -1,5 +1,7 @@
 #!/bin/bash
 
+data_leakage=False
+
 # training params
 model_name="resnet18"
 objective="regression"
@@ -18,6 +20,7 @@ n_repetitions=5
 python3 $PROJECT_DIR/src/scripts/fine_tuning/repeated_fine_tune_cnn.py \
   --model_name=${model_name} \
   --objective=${objective} \
+  --data_leakage=${data_leakage} \
   --train_chunking_strategy=${train_chunking_strategy} \
   --eval_chunking_strategy=${eval_chunking_strategy} \
   --batch_size=${batch_size} \
