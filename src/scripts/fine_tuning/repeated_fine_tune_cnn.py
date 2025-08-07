@@ -33,6 +33,7 @@ def repeated_fine_tune_cnn(
     model_name: str,
     pretrained: bool,
     objective: Literal['classification', 'regression'],
+    data_leakage: bool,
     evaluate_on_test_split: bool = True,
     # cross-validation
     n_folds: int = 5,
@@ -108,6 +109,7 @@ def repeated_fine_tune_cnn(
                 fold_idx=fold_idx,
                 n_folds=n_folds,
                 seed=seed,
+                data_leakage=data_leakage,
             )
 
             # loggers
