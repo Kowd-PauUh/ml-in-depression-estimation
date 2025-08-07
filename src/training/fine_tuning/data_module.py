@@ -45,6 +45,7 @@ class FineTuningDataModule(L.LightningDataModule):
         batch_size: int = 16,
         val_batch_size: int = 16,
         seed: int | None = 42,
+        data_leakage: bool = False,
     ):
         super().__init__()
 
@@ -63,10 +64,16 @@ class FineTuningDataModule(L.LightningDataModule):
         self.train_val_split_name = train_val_split_name
         self.test_split_name = test_split_name
         self.hold_out_test_split = hold_out_test_split
+        self.data_leakage = data_leakage
         if not self.hold_out_test_split:
             logger.info(
                 'Initialized data module with hold_out_test_split=False. '
                 'Training and validation will be performed on entire data with no test split.'
+            )
+        if self.data_leakage:
+            logger.warning(
+                'Initialized data module with `data_leakage=True`. '
+                'This will cause data leakage in validation partition.'
             )
 
         # preprocessing
@@ -79,12 +86,9 @@ class FineTuningDataModule(L.LightningDataModule):
         # crossval (overrides val_size)
         self.fold_idx = fold_idx
         self.n_folds = n_folds
-
-        self.crossval = False
         if (fold_idx is None) != (n_folds is None):
             raise ValueError('Both `fold_idx` and `n_folds` must be provided together or left as None.')
-        else:
-            self.crossval = True
+        self.crossval = fold_idx is not None and n_folds is not None
 
         # batch sizes
         if batch_size % 2 != 0 or val_batch_size % 2 != 0:
@@ -157,56 +161,75 @@ class FineTuningDataModule(L.LightningDataModule):
         groups = groups.sample(frac=1, random_state=self.seed)
 
         if self.crossval:
+            split_level = 'example' if self.data_leakage else 'group'
             logger.info(
                 f'Setting up {self.__class__.__name__} using {self.n_folds}-fold '
-                f'cross-validation with  validation performed on fold with id '
-                f'{self.fold_idx}. Note that this mode overrides `val_size` parameter.'
+                f'cross-validation with validation performed on fold with id '
+                f'{self.fold_idx}. Note that this mode overrides `val_size` parameter. '
+                f'Data will be split into folds at {split_level} level '
+                f'({"" if self.data_leakage else "no "}data leakage).'
             )
 
-            # split groups into folds
             kfold = KFold(n_splits=self.n_folds, shuffle=False)
 
-            # take appropriate split by self.fold_idx
-            train_groups_idx, val_groups_idx = list(kfold.split(groups.index))[self.fold_idx]
-            train_groups, val_groups = groups.index[train_groups_idx], groups.index[val_groups_idx]
+            # no leakage
+            if not self.data_leakage:
+                # split groups into folds and take appropriate split by self.fold_idx
+                train_groups_idx, val_groups_idx = list(kfold.split(groups.index))[self.fold_idx]
+                train_groups, val_groups = groups.index[train_groups_idx], groups.index[val_groups_idx]
+
+                # define train and val datasets
+                train_df = train_val_df[train_val_df[self.grouping_column_name].isin(train_groups)]
+                val_df = train_val_df[train_val_df[self.grouping_column_name].isin(val_groups)]
+
+            # leakage
+            else:
+                # kfold on randomly shuffled dataset
+                train_idx, val_idx = list(kfold.split(train_val_df))[self.fold_idx]
+                train_df, val_df = train_val_df.iloc[train_idx], train_val_df.iloc[val_idx]
         else:
-            logger.info(
-                f'Setting up {self.__class__.__name__} using `val_size={self.val_size}`. '
-                f'Training data will be split into train ad val split with stratification '
-                f'if possible, with each group appearing in only one dataset.'
-            )
-
-            try:
-                # split groups with stratification
-                train_groups, val_groups = train_test_split(
-                    groups.index,
-                    test_size=self.val_size,
-                    stratify=groups[self.target_column_name],
-                    random_state=self.seed,
+            # no leakage
+            if not self.data_leakage:
+                logger.info(
+                    f'Setting up {self.__class__.__name__} using `val_size={self.val_size}`. '
+                    f'Training data will be split into train and val partitions at group level (no data leakage, '
+                    f'each group appears in only one partitions) with stratification if possible.'
                 )
-            except ValueError:
-                logger.warning(
-                    f'Failed to stratify splits by "{self.target_column_name}". '
-                    f'Splits have no shared groups.'
+                try:
+                    # split groups with stratification
+                    train_groups, val_groups = train_test_split(
+                        groups.index,
+                        test_size=self.val_size,
+                        stratify=groups[self.target_column_name],
+                        random_state=self.seed,
+                    )
+                except ValueError:
+                    logger.warning(
+                        f'Failed to stratify splits by "{self.target_column_name}". '
+                        f'Splits have no shared groups.'
+                    )
+
+                    # split groups without stratification
+                    train_groups, val_groups = train_test_split(
+                        groups.index,
+                        test_size=self.val_size,
+                        random_state=self.seed,
+                    )
+
+                # define train and val datasets
+                train_df = train_val_df[train_val_df[self.grouping_column_name].isin(train_groups)]
+                val_df = train_val_df[train_val_df[self.grouping_column_name].isin(val_groups)]
+
+            # leakage
+            else:
+                logger.info(
+                    f'Setting up {self.__class__.__name__} using `val_size={self.val_size}`. '
+                    f'Training data will be split into train and val partitions at example level '
+                    f'(data leakage) without stratification.'
                 )
-
-                # split groups without stratification
-                train_groups, val_groups = train_test_split(
-                    groups.index,
-                    test_size=self.val_size,
-                    random_state=self.seed,
-                )
-
-        # define train and val datasets
-        train_df = train_val_df[train_val_df[self.grouping_column_name].isin(train_groups)]
-        val_df = train_val_df[train_val_df[self.grouping_column_name].isin(val_groups)]
-
-        # you can uncomment the following lines to emulate wrong experimental setup 
-        # where train and val datasets share patients and therefore the model overfits
-        # to the patients instead of learning underlying dependencies in data
-        #
-        # train_df = train_val_df.sample(frac=0.8)
-        # val_df = train_val_df[~train_val_df.index.isin(train_df.index)]
+                # split randomly
+                train_df = train_val_df.sample(frac=1-self.val_size, random_state=self.seed)
+                val_df = train_val_df[~train_val_df.index.isin(train_df.index)]
 
         # log stratification results
         logger.info(
