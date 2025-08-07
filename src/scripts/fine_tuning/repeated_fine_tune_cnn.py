@@ -140,6 +140,7 @@ def repeated_fine_tune_cnn(
                 'model_class_name': cnn.__class__.__name__,
                 'pretrained': str(pretrained),
                 'objective': objective,
+                'data_leakage': str(data_leakage),
                 'n_folds': n_folds,
                 'n_repetitions': n_repetitions,
                 'evaluate_on_test_split': evaluate_on_test_split,
