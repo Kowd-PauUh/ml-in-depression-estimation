@@ -4,6 +4,7 @@ data_leakage=True
 
 # training params
 model_name="resnet18"
+pretrained=True
 objective="regression"
 augmentation="weak"
 batch_size=16
@@ -19,6 +20,7 @@ n_repetitions=5
 
 python3 $PROJECT_DIR/src/scripts/fine_tuning/repeated_fine_tune_cnn.py \
   --model_name=${model_name} \
+  --pretrained=${pretrained} \
   --objective=${objective} \
   --data_leakage=${data_leakage} \
   --train_chunking_strategy=${train_chunking_strategy} \
