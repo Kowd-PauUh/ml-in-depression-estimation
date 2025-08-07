@@ -166,6 +166,7 @@ def repeated_fine_tune_cnn(
                 'batch_size': batch_size,
                 'val_batch_size': val_batch_size,
                 'cross_validation': timestamp,
+                'experiment_name': EXPERIMENT_NAME,
                 **tags,
                 **kwargs
             }
