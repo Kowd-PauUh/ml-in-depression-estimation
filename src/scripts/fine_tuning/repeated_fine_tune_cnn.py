@@ -190,7 +190,7 @@ def repeated_fine_tune_cnn(
                 mlflow.create_experiment(EXPERIMENT_NAME)
             mlflow.set_experiment(EXPERIMENT_NAME)
             mlflow.start_run(
-                run_name=model_name, 
+                run_name=f'{model_name} ("{objective}", {pretrained=}, {data_leakage=})', 
                 tags={
                     'experiment_name': EXPERIMENT_NAME,
                     'cross_validation': timestamp,
