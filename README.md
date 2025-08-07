@@ -19,7 +19,7 @@ Below is the list of steps required to reproduce the results of our paper from s
 <br>6. _(container shell)_ Execute DAIC dataset download (step 2): `sh src/scripts/data/download_metadata.sh` 
 <br>7. _(container shell)_ Preprocess data: `python3 src/scripts/data/preprocess_data.py`
 <br>8. _(container shell)_ Split data: `python3 src/scripts/data/split_data.py`
-<br>9. _(container shell)_ Reproduce training results: `sh src/scripts/fine_tuning/reproduce_depresnet.sh`
+<br>9. _(container shell)_ Reproduce training results: (i) without data leakage `sh src/scripts/fine_tuning/reproduce_no_leakage.sh`, (ii) with data leakage `sh src/scripts/fine_tuning/reproduce_leakage.sh`
 
 You can omit data download and set different data paths than default.<br>
 For more information examine [data_module.py](src/training/fine_tuning/data_module.py) and [repeated_fine_tune_cnn.py](/src/scripts/fine_tuning/repeated_fine_tune_cnn.py)
