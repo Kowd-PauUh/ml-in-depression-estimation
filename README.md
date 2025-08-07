@@ -8,6 +8,10 @@
 
 ![Architecture](paper/figures/architecture/architecture.svg)
 
+![R2 learning curves](paper/figures/subject_leakage/02-r2-curve.png)
+
+![MAE learning curves](paper/figures/subject_leakage/03-mae-curve.png)
+
 ## Steps to reproduce
 
 Below is the list of steps required to reproduce the results of our paper from scratch:
