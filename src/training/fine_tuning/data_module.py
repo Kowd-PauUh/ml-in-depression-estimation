@@ -80,6 +80,12 @@ class FineTuningDataModule(L.LightningDataModule):
         self.fold_idx = fold_idx
         self.n_folds = n_folds
 
+        self.crossval = False
+        if (fold_idx is None) != (n_folds is None):
+            raise ValueError('Both `fold_idx` and `n_folds` must be provided together or left as None.')
+        else:
+            self.crossval = True
+
         # batch sizes
         if batch_size % 2 != 0 or val_batch_size % 2 != 0:
             raise ValueError(
@@ -141,19 +147,21 @@ class FineTuningDataModule(L.LightningDataModule):
         if not self.hold_out_test_split:
             test_df = test_df.iloc[:0]  # empty dataframe
 
-        if self.fold_idx is not None and self.n_folds is not None:
+        # define train-val dataset
+        train_val_df = df[df[self.split_column_name] == self.train_val_split_name]
+        if not self.hold_out_test_split:
+            train_val_df = df  # train and validate on entire dataset
+
+        # find unique groups (participants)
+        groups = train_val_df.groupby(self.grouping_column_name).first()
+        groups = groups.sample(frac=1, random_state=self.seed)
+
+        if self.crossval:
             logger.info(
                 f'Setting up {self.__class__.__name__} using {self.n_folds}-fold '
                 f'cross-validation with  validation performed on fold with id '
                 f'{self.fold_idx}. Note that this mode overrides `val_size` parameter.'
             )
-
-            # group stratified split for train and val df
-            train_val_df = df[df[self.split_column_name] == self.train_val_split_name]
-            if not self.hold_out_test_split:
-                train_val_df = df  # train and validate on entire dataset
-            groups = train_val_df.groupby(self.grouping_column_name).first()
-            groups = groups.sample(frac=1, random_state=self.seed)
 
             # split groups into folds
             kfold = KFold(n_splits=self.n_folds, shuffle=False)
@@ -168,12 +176,8 @@ class FineTuningDataModule(L.LightningDataModule):
                 f'if possible, with each group appearing in only one dataset.'
             )
 
-            # group stratified split for train and val df
-            train_val_df = df[df[self.split_column_name] == self.train_val_split_name]
-            groups = train_val_df.groupby(self.grouping_column_name).first()
-            groups = groups.sample(frac=1, random_state=self.seed)
-
             try:
+                # split groups with stratification
                 train_groups, val_groups = train_test_split(
                     groups.index,
                     test_size=self.val_size,
@@ -185,6 +189,8 @@ class FineTuningDataModule(L.LightningDataModule):
                     f'Failed to stratify splits by "{self.target_column_name}". '
                     f'Splits have no shared groups.'
                 )
+
+                # split groups without stratification
                 train_groups, val_groups = train_test_split(
                     groups.index,
                     test_size=self.val_size,
