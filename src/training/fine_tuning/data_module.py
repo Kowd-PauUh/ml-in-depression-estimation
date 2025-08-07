@@ -73,7 +73,7 @@ class FineTuningDataModule(L.LightningDataModule):
         if self.data_leakage:
             logger.warning(
                 'Initialized data module with `data_leakage=True`. '
-                'This will cause data leakage in validation partition.'
+                'This will cause data leakage into validation partition.'
             )
 
         # preprocessing
