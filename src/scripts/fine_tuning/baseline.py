@@ -13,9 +13,8 @@ data_df = pd.read_csv(data_path).drop('split', axis=1)
 split_df = pd.read_csv(split_path)
 merged_df = data_df.merge(split_df, on='participant_id', how='left')
 
-# compute baseline prediction per split
-mean_prediction = merged_df[['split', 'phq_score']].groupby('split').mean()
-merged_df['mean_prediction'] = merged_df['split'].map(mean_prediction['phq_score'])
+# compute mean predictor baseline
+merged_df['mean_prediction'] = merged_df[merged_df['split'] == 'train']['phq_score'].mean()
 
 # compute mean absolute error
 merged_df['error'] = abs(merged_df['mean_prediction'] - merged_df['phq_score'])
