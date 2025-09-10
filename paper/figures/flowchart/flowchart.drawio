@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36" version="28.0.7">
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36" version="28.2.0">
   <diagram name="Page-1" id="AcgcW_brWqlfK4vuXaut">
     <mxGraphModel dx="786" dy="417" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
@@ -18,7 +18,7 @@
         <mxCell id="W_HRlakQyIaq2_ud1TEQ-2" value="Remove duplicates&lt;div&gt;122 papers&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="380" y="250" width="130" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="W_HRlakQyIaq2_ud1TEQ-10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="W_HRlakQyIaq2_ud1TEQ-3" target="W_HRlakQyIaq2_ud1TEQ-9" edge="1">
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="W_HRlakQyIaq2_ud1TEQ-3" target="JVogDqIXSGi4d4kN093v-1" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="W_HRlakQyIaq2_ud1TEQ-3" value="Papers for title and abstract screening&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;414 papers&lt;/span&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
@@ -58,8 +58,8 @@
         <mxCell id="W_HRlakQyIaq2_ud1TEQ-14" value="Ineligible after&amp;nbsp;&lt;div&gt;full-text review&lt;br&gt;&lt;div&gt;66 papers&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="380" y="542" width="130" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="W_HRlakQyIaq2_ud1TEQ-15" value="&lt;blockquote style=&quot;margin: 0px 0px 0px 10px; border: none; padding: 0px;&quot;&gt;&lt;div&gt;Does not regard DAIC-WOZ dataset: 47&lt;/div&gt;&lt;div&gt;Does not use Mean Absolute Error&amp;nbsp;&lt;/div&gt;&lt;div&gt;(MAE) to assess estimation quality: 2&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Does not introduce a new model&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;or repurposes an existing model: 11&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Not in English: 6&lt;/span&gt;&lt;/div&gt;&lt;/blockquote&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;" parent="1" vertex="1">
-          <mxGeometry x="530" y="511" width="240" height="110" as="geometry" />
+        <mxCell id="W_HRlakQyIaq2_ud1TEQ-15" value="&lt;blockquote style=&quot;margin: 0px 0px 0px 10px; border: none; padding: 0px;&quot;&gt;&lt;div&gt;1. Does not regard DAIC-WOZ dataset: 47;&lt;/div&gt;&lt;div&gt;2. Does not use Mean Absolute Error&amp;nbsp;&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; (MAE) to assess estimation quality: 2;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;3. Does not introduce a new model&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp; &amp;nbsp; or repurposes an existing model: 11;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;4. Not in English: 6.&lt;/span&gt;&lt;/div&gt;&lt;/blockquote&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;" parent="1" vertex="1">
+          <mxGeometry x="530" y="511" width="252" height="110" as="geometry" />
         </mxCell>
         <mxCell id="fQ9zKUB4HCehQB5npPaW-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;endArrow=none;" parent="1" source="W_HRlakQyIaq2_ud1TEQ-18" edge="1">
           <mxGeometry relative="1" as="geometry">
@@ -71,6 +71,9 @@
         </mxCell>
         <mxCell id="fQ9zKUB4HCehQB5npPaW-1" value="Papers included in our review&lt;div&gt;5 papers&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="240" y="692" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="iWgOb4q5fTIeE0G99GAq-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="JVogDqIXSGi4d4kN093v-1" target="W_HRlakQyIaq2_ud1TEQ-9">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="JVogDqIXSGi4d4kN093v-1" value="Records sought for retrieval&lt;div&gt;134 papers&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="240" y="392" width="120" height="50" as="geometry" />
