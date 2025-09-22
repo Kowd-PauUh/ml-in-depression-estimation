@@ -7,6 +7,7 @@ from time import time
 
 import torch
 import lightning as L
+from lightning.pytorch import seed_everything
 from lightning.pytorch.loggers import CSVLogger, MLFlowLogger
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
 import fire
@@ -79,6 +80,10 @@ def repeated_fine_tune_cnn(
 
     for seed in range(n_repetitions):
         for fold_idx in range(n_folds):
+            seed_everything(
+                (seed + fold_idx) * (seed + fold_idx + 1) // 2 + fold_idx
+            )  # unique seed per (seed, fold_idx) pair
+
             # initialize model
             cnn = get_model(model_name, pretrained)
 
@@ -167,6 +172,8 @@ def repeated_fine_tune_cnn(
                 'val_batch_size': val_batch_size,
                 'cross_validation': timestamp,
                 'experiment_name': EXPERIMENT_NAME,
+                'seed': str(seed),
+                'fold_idx': str(fold_idx),
                 **tags,
                 **kwargs
             }
