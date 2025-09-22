@@ -12,7 +12,7 @@ lr="1e-5"
 train_chunking_strategy="transformer"
 eval_chunking_strategy="transformer"
 ram_optimized_mode=False
-max_epochs=30
+max_epochs=10
 
 # cross-validation params
 n_folds=5
