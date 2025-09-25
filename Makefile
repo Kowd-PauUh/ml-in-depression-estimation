@@ -1,16 +1,13 @@
-#!make
-
-export 
-
-REQUIREMENTS = stable
 # "soft" or "stable"
+REQUIREMENTS = stable
 
-PROJECT_NAME = $(shell echo $(notdir $(PWD)) | tr A-Z a-z)
 PROJECT_DIR = $(PWD)
+PROJECT_NAME = $(shell echo $(notdir $(PWD)) | tr A-Z a-z)
 
 env:
 	echo "PROJECT_DIR=$(PROJECT_DIR)" > docker/.env
 	echo "PROJECT_NAME=$(PROJECT_NAME)" >> docker/.env
+	echo "REQUIREMENTS=$(REQUIREMENTS)" >> docker/.env
 
 clean:
 	docker compose -f docker/docker-compose.yml -p $(PROJECT_NAME) down --remove-orphans
