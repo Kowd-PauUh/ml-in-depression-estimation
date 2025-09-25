@@ -7,7 +7,8 @@ ARG REQUIREMENTS=stable
 ENV PYTHONPATH=${PROJECT_DIR}
 
 # install linux packages
-# you may remove any package you don't need (e.g. texlive-full for LaTeX support)
+# Note: you may remove any package you don't need
+#       (e.g. texlive-full for LaTeX support) and add any other
 RUN printf '#!/bin/sh\nexit 0\n' > /usr/sbin/policy-rc.d \
   && apt-get update -yqq \
   && apt-get install -y --no-install-recommends \
