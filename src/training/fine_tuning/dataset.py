@@ -28,6 +28,11 @@ class FineTuningDataset(Dataset):
         Name of the column in `df` that contains start times (in seconds) for trimming the audio.
     end_time_column_name : str
         Name of the column in `df` that contains end times (in seconds) for trimming the audio.
+    transcript_column_name : str
+        Name of the column in `df` that contains audio transcript text.
+    load_waveforms : bool
+        If False, waveforms are not loaded and `None` is returned
+        for both waveform and sample rate in `__getitem__`.
     fast_mode : bool
         If True, all waveforms are loaded into memory during initialization.
     _waveforms : dict
@@ -47,8 +52,10 @@ class FineTuningDataset(Dataset):
     >>> dataset = FineTuningDataset(
     ...     df=df,
     ...     filepath_column_name='source',
+    ...     target_column_name='phq_score',
     ...     start_time_column_name='start_time',
     ...     end_time_column_name='end_time',
+    ...     transcript_column_name='text',
     ...     fast_mode=True  # set to False for RAM-optimised data loading
     ... )
     """
@@ -62,6 +69,8 @@ class FineTuningDataset(Dataset):
         target_column_name: str,
         start_time_column_name: str,
         end_time_column_name: str,
+        transcript_column_name: str,
+        load_waveforms: bool,
         fast_mode: bool,
         target_sr: int | None = 16000,
     ):
@@ -87,6 +96,11 @@ class FineTuningDataset(Dataset):
         end_time_column_name : str
             Name of the column in `df` that contains end 
             times (in seconds) for trimming the audio.
+        transcript_column_name : str
+            Name of the column in `df` that contains audio transcript text.
+        load_waveforms : bool
+            If False, waveforms are not loaded and `None` is returned
+            for both waveform and sample rate in `__getitem__`.
         fast_mode : bool
             If True, all waveforms are preloaded into memory.
         target_sr : int or None, optional
@@ -102,11 +116,13 @@ class FineTuningDataset(Dataset):
         self.target_column_name = target_column_name
         self.start_time_column_name = start_time_column_name
         self.end_time_column_name = end_time_column_name
+        self.transcript_column_name = transcript_column_name
+        self.load_waveforms = load_waveforms
         self.fast_mode = fast_mode
         self.target_sr = target_sr
 
         unique_filepaths_cnt = len(self.df[self.filepath_column_name].unique())
-        if self.fast_mode:
+        if self.fast_mode and self.load_waveforms:
             logger.info(
                 f'Dataset is initialized in fast mode. All waveforms '
                 f'{unique_filepaths_cnt} will be loaded to RAM.'
@@ -142,7 +158,7 @@ class FineTuningDataset(Dataset):
                         'total_size': self.sizeof_fmt(FineTuningDataset.total_size)
                     }
                 )
-        else:
+        elif self.load_waveforms:
             logger.info(
                 f'Dataset is initialized in RAM-optimised mode. '
                 f'Waveforms ({unique_filepaths_cnt}) '
@@ -160,14 +176,15 @@ class FineTuningDataset(Dataset):
         """
         return len(self.df)
 
-    def __getitem__(self, i: int) -> Tuple[torch.Tensor, int, float]:
+    def __getitem__(self, i: int) -> Tuple[torch.Tensor | None, int | None, str, float]:
         """
         Returns the i-th sample from the dataset.
 
-        This method loads the waveform corresponding to the i-th entry 
-        in the DataFrame. If `fast_mode` is enabled, the waveform is 
-        retrieved from memory; otherwise, it is loaded from disk. The 
-        waveform is then trimmed to the specified start and end times.
+        This method loads the data corresponding to the i-th entry in the DataFrame.
+        If `self.load_waveforms=True`:
+            If `fast_mode` is enabled, the waveform is retrieved from memory;
+            otherwise, it is loaded from disk. The waveform is then trimmed
+            to the specified start and end times.
 
         Parameters
         ----------
@@ -177,28 +194,33 @@ class FineTuningDataset(Dataset):
         Returns
         -------
         Tuple[torch.Tensor, int, float]
-            A tuple containing the waveform as a torch tensor, the sample rate and the target value.
+            A tuple containing the waveform as a torch tensor, the sample rate,
+            the audio transcript and the target value.
         """
         # get information on audio sample
         row = self.df.iloc[i]
         filepath = row[self.filepath_column_name]
         start_time, end_time = row[self.start_time_column_name], row[self.end_time_column_name]
         target_value = float(row[self.target_column_name])
+        transcript = row[self.transcript_column_name]
 
-        # load waveform
-        if self.fast_mode:
-            waveform, sr = FineTuningDataset._waveforms[filepath]
-        else:
-            waveform, sr = load_waveform(audio_path=filepath, normalize=True)
+        waveform, sr = None, None
+        if self.load_waveforms:
+            # load waveform
+            if self.fast_mode:
+                waveform, sr = FineTuningDataset._waveforms[filepath]
+            else:
+                waveform, sr = load_waveform(audio_path=filepath, normalize=True)
 
-        # trim waveform into audio sample
-        waveform = trim_waveform(
-            waveform=waveform,
-            start_time=start_time,
-            end_time=end_time,
-            sample_rate=sr
-        )
-        return waveform, sr, target_value
+            # trim waveform into audio sample
+            waveform = trim_waveform(
+                waveform=waveform,
+                start_time=start_time,
+                end_time=end_time,
+                sample_rate=sr
+            )
+
+        return waveform, sr, transcript, target_value
 
     @staticmethod
     def sizeof_fmt(num: int | float, suffix="B") -> str:
