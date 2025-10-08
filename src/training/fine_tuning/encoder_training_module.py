@@ -104,36 +104,37 @@ class EncoderTrainingModule(L.LightningModule):
         loss,
         metrics: Dict[str, int | float],
         step_name: str,
+        batch_size: int,
         prog_bar: bool = False
     ):
         # log loss and store its value
         self.log(
             f'{step_name}_loss', loss, prog_bar=prog_bar, 
-            on_step=True, on_epoch=True
+            on_step=True, on_epoch=True, batch_size=batch_size
         )
 
         # log metrics and store their values
         for metric_name, metric_value in metrics.items():
             self.log(
                 f'{step_name}_{metric_name}', metric_value, 
-                on_step=True, on_epoch=True, 
+                on_step=True, on_epoch=True, batch_size=batch_size, 
                 prog_bar=prog_bar
             )
 
     def training_step(self, batch, _):
         loss, metrics = self.forward_step(batch)
-        self.store_metrics(loss=loss, metrics=metrics, step_name='train', prog_bar=True)
+        self.store_metrics(loss=loss, metrics=metrics, step_name='train', batch_size=len(batch), prog_bar=True)
         return loss
 
     def validation_step(self, batch, _):
         with torch.no_grad():
             loss, metrics = self.forward_step(batch)
-            self.store_metrics(loss=loss, metrics=metrics, step_name='val', prog_bar=True)
+            self.store_metrics(loss=loss, metrics=metrics, step_name='val', batch_size=len(batch), prog_bar=True)
 
     def test_step(self, batch, _):
         with torch.no_grad():
             loss, metrics = self.forward_step(batch)
-            self.store_metrics(loss=loss, metrics=metrics, step_name='test')
+            self.store_metrics(loss=loss, metrics=metrics, step_name='test', batch_size=len(batch))
 
     def configure_optimizers(self):
         # optimizer
