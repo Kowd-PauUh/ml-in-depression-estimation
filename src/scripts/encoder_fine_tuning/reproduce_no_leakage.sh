@@ -6,9 +6,8 @@ data_leakage=False
 model_name_or_path="roberta-large"
 objective="regression"
 batch_size=16
-lr="3e-5"
-max_epochs=4
-lr_patience=10
+lr="1e-5"
+max_epochs=10
 enable_checkpointing=False
 
 # cross-validation params
@@ -22,8 +21,6 @@ python3 $PROJECT_DIR/src/scripts/encoder_fine_tuning/repeated_fine_tune_encoder.
   --batch_size=${batch_size} \
   --max_epochs=${max_epochs} \
   --lr=${lr} \
-  --lr_patience=${lr_patience} \
   --enable_checkpointing=${enable_checkpointing} \
   --n_folds=${n_folds} \
-  --n_repetitions=${n_repetitions} \
-  --tags="{\"reproduce_depresnet\":\"true\"}"
+  --n_repetitions=${n_repetitions}
