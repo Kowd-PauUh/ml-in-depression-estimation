@@ -46,7 +46,7 @@ def repeated_fine_tune_encoder(
     lr_reduction_factor: float = 0.5,
     lr_patience: int = 0,
     lr: float = 1e-5,
-    scheduler_type: Literal['one_cycle', 'reduce_on_plateau'] = 'one_cycle',
+    scheduler_type: Literal['one_cycle', 'reduce_on_plateau'] = 'reduce_on_plateau',
     min_delta: float = 1e-3,
     patience: int = 1,
     batch_size: int = 32,
