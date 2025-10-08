@@ -29,6 +29,8 @@ class FineTuningDataModule(L.LightningDataModule):
         start_time_column_name: str = 'start_time',
         end_time_column_name: str = 'end_time',
         filepath_column_name: str = 'source',
+        transcript_column_name: str = 'text',
+        load_waveforms: bool = True,
         target_column_name: Literal['phq_binary', 'phq_score'] = 'phq_binary',
         train_val_split_name: str = 'train',
         test_split_name: str = 'test',
@@ -60,6 +62,8 @@ class FineTuningDataModule(L.LightningDataModule):
         self.start_time_column_name = start_time_column_name
         self.end_time_column_name = end_time_column_name
         self.filepath_column_name = filepath_column_name
+        self.transcript_column_name = transcript_column_name
+        self.load_waveforms = load_waveforms
         self.target_column_name = target_column_name
         self.train_val_split_name = train_val_split_name
         self.test_split_name = test_split_name
@@ -247,6 +251,8 @@ class FineTuningDataModule(L.LightningDataModule):
                 target_column_name=self.target_column_name,
                 start_time_column_name=self.start_time_column_name,
                 end_time_column_name=self.end_time_column_name,
+                transcript_column_name=self.transcript_column_name,
+                load_waveforms=self.load_waveforms,
                 fast_mode=self.fast_mode
             )
             self.val_dataset = FineTuningDataset(
@@ -255,6 +261,8 @@ class FineTuningDataModule(L.LightningDataModule):
                 target_column_name=self.target_column_name,
                 start_time_column_name=self.start_time_column_name,
                 end_time_column_name=self.end_time_column_name,
+                transcript_column_name=self.transcript_column_name,
+                load_waveforms=self.load_waveforms,
                 fast_mode=self.fast_mode
             )
         if stage == 'test' or stage is None:
@@ -264,6 +272,8 @@ class FineTuningDataModule(L.LightningDataModule):
                 target_column_name=self.target_column_name,
                 start_time_column_name=self.start_time_column_name,
                 end_time_column_name=self.end_time_column_name,
+                transcript_column_name=self.transcript_column_name,
+                load_waveforms=self.load_waveforms,
                 fast_mode=self.fast_mode
             )
 
