@@ -9,9 +9,10 @@ jupyter
 seaborn
 
 # modelling
-torch==2.0.1
+torch
 lightning
 torchaudio
+soundfile
 torchvision
 torchmetrics
 sentence-transformers
