@@ -18,7 +18,7 @@ from src.waveform.transformation import mel_spectrogram
 from src.training.utils import repeat_tensor, truncate_or_pad, get_random_chunk
 
 
-class FineTuningTrainingModule(L.LightningModule):
+class CNNTrainingModule(L.LightningModule):
     def __init__(
         self,
         # training configuration
