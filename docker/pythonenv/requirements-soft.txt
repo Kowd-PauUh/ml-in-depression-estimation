@@ -9,7 +9,7 @@ jupyter
 seaborn
 
 # modelling
-torch
+torch==2.0.1
 lightning
 torchaudio
 torchvision
@@ -21,7 +21,7 @@ tensorboard
 tensorboardX
 
 # tracking
-mlflow
+mlflow==2.20.1
 
 # other
 fire
