@@ -15,7 +15,7 @@ import mlflow
 import pandas as pd
 
 from src.training.foundation_models import FOUNDATION_MODELS
-from src.training.fine_tuning.training_module import FineTuningTrainingModule
+from src.training.fine_tuning.cnn_training_module import CNNTrainingModule
 from src.training.fine_tuning.data_module import FineTuningDataModule
 from src.training.loss_monitor import LossMonitor
 from src.training.epoch_logging import EpochLogger, MLFlowLoggerAdapter
@@ -88,7 +88,7 @@ def repeated_fine_tune_cnn(
             cnn = get_model(model_name, pretrained)
 
             # modules
-            model = FineTuningTrainingModule(
+            model = CNNTrainingModule(
                 cnn=cnn, 
                 objective=objective,
                 mel_bins=mel_bins,
