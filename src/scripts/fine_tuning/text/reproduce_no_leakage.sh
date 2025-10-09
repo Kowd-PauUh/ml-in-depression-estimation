@@ -14,7 +14,7 @@ enable_checkpointing=False
 n_folds=5
 n_repetitions=5
 
-python3 $PROJECT_DIR/src/scripts/encoder_fine_tuning/repeated_fine_tune_encoder.py \
+python3 $PROJECT_DIR/src/scripts/fine_tuning/text/repeated_fine_tune_encoder.py \
   --model_name_or_path=${model_name_or_path} \
   --objective=${objective} \
   --data_leakage=${data_leakage} \
