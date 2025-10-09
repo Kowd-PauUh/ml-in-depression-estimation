@@ -7,6 +7,7 @@ RUN printf '#!/bin/sh\nexit 0\n' > /usr/sbin/policy-rc.d \
   && apt-get update -yqq \
   && apt-get install -y --no-install-recommends \
   curl tar build-essential git-all \
+  texlive-full fonts-liberation \
   && apt-get autoremove -yqq --purge \
   && apt-get clean
 
