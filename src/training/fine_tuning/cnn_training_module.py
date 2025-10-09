@@ -410,7 +410,7 @@ class CNNTrainingModule(L.LightningModule):
         return self._forward_pass(mel_spectrograms)
 
     def forward_step(self, batch, eval_mode: bool = True):
-        waveforms = [(w, sr) for w, sr, _ in batch]
+        waveforms = [(w, sr) for w, sr, *_ in batch]
         y = torch.tensor([target_value for *_, target_value in batch]).to(self.device)
 
         # feed waveforms through model and calculate loss
