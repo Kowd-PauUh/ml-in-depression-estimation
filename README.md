@@ -16,4 +16,4 @@ Below is the list of steps required to reproduce the results of our paper from s
 <br>11. _(container shell)_ Reproduce training results on text modality: (i) without data leakage `sh src/scripts/fine_tuning/text/reproduce_no_leakage.sh`, (ii) with data leakage `sh src/scripts/fine_tuning/text/reproduce_leakage.sh`
 
 You can omit data download and set different data paths than default.<br>
-For more information examine [data_module.py](src/training/fine_tuning/data_module.py) and [repeated_fine_tune_cnn.py](/src/scripts/fine_tuning/repeated_fine_tune_cnn.py)
+For more information examine [data_module.py](src/training/fine_tuning/data_module.py).
