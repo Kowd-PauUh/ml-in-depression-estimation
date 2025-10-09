@@ -9,7 +9,7 @@ import torch
 import lightning as L
 from lightning.pytorch import seed_everything
 from lightning.pytorch.loggers import CSVLogger, MLFlowLogger
-from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
+from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor
 import fire
 import mlflow
 import pandas as pd
@@ -125,16 +125,6 @@ def repeated_fine_tune_cnn(
                 monitor="val_loss", mode="min", patience=patience, min_delta=min_delta, verbose=True
             )
             lr_monitor = LearningRateMonitor(logging_interval='step')
-            model_checkpoint = ModelCheckpoint(
-                Path(csv_logger.log_dir) / 'checkpoints', 
-                save_weights_only=True,
-                save_top_k=1, 
-                monitor="val_loss", 
-                save_last=True, 
-                verbose=True
-            )
-            model_checkpoint.CHECKPOINT_JOIN_CHAR = '_'
-            model_checkpoint.CHECKPOINT_EQUALS_CHAR = '_'
             loss_monitor = LossMonitor()
             epoch_logger = EpochLogger()
 
@@ -222,7 +212,6 @@ def repeated_fine_tune_cnn(
                 min_epochs=min_epochs,
                 callbacks=[
                     early_stopping, 
-                    model_checkpoint, 
                     lr_monitor, 
                     loss_monitor,
                     epoch_logger,
