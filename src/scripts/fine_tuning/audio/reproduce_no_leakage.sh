@@ -13,12 +13,13 @@ train_chunking_strategy="transformer"
 eval_chunking_strategy="transformer"
 ram_optimized_mode=False
 max_epochs=10
+enable_checkpointing=False
 
 # cross-validation params
 n_folds=5
 n_repetitions=5
 
-python3 $PROJECT_DIR/src/scripts/fine_tuning/repeated_fine_tune_cnn.py \
+python3 $PROJECT_DIR/src/scripts/fine_tuning/audio/repeated_fine_tune_cnn.py \
   --model_name=${model_name} \
   --pretrained=${pretrained} \
   --objective=${objective} \
@@ -30,6 +31,6 @@ python3 $PROJECT_DIR/src/scripts/fine_tuning/repeated_fine_tune_cnn.py \
   --max_epochs=${max_epochs} \
   --augmentation=${augmentation} \
   --lr=${lr} \
+  --enable_checkpointing=${enable_checkpointing} \
   --n_folds=${n_folds} \
-  --n_repetitions=${n_repetitions} \
-  --tags="{\"reproduce_depresnet\":\"true\"}"
+  --n_repetitions=${n_repetitions}
