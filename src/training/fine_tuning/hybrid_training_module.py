@@ -5,10 +5,11 @@ import math
 import torch
 from torch import optim
 from torch import nn
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau, OneCycleLR
 from torchvision import models
 import torchmetrics
 import lightning as L
+from transformers import AutoTokenizer, AutoModel
 
 from loguru import logger
 
@@ -18,26 +19,31 @@ from src.waveform.transformation import mel_spectrogram
 from src.training.utils import repeat_tensor, truncate_or_pad, get_random_chunk
 
 
-class CNNTrainingModule(L.LightningModule):
+class HybridTrainingModule(L.LightningModule):
     def __init__(
         self,
         # training configuration
         cnn,
+        encoder_model_name_or_path: str,
         objective: Literal['classification', 'regression'],
         *,
+        # model params
+        prefix: str = '',
+        max_length: int | None = None,
+        model_init_kwargs: dict | None = None,
         # waveform operations
         mel_bins: int = 224,
         mel_length: int = 3072,
-        augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,\
+        augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,
         # learning rate
-        scheduler_type: Literal['one_cycle', 'reduce_on_plateau'] = 'one_cycle',
+        scheduler_type: Literal['one_cycle', 'reduce_on_plateau'] = 'reduce_on_plateau',
         lr: float = 3e-5,
         lr_reduction_factor: float = 0.5,
         lr_patience: int = 3,
         # compute
         compute_batch_size: int = 256,
         # cnn transformer pooling
-        hybrid_setup_cnn_features: int = 512,
+        cnn_output_features: int = 512,
         transformer_nhead: int = 2,
         transformer_dropout: float = 0.1,
     ):
@@ -46,19 +52,29 @@ class CNNTrainingModule(L.LightningModule):
         # prepare CNN for either regression / binary classification objective
         # or features extraction for hybrid architectures
         self.cnn = cnn
-        self.hybrid_setup_cnn_features = hybrid_setup_cnn_features
-        self._replace_last_cnn_layer(out_features=hybrid_setup_cnn_features)
+        self.cnn_output_features = cnn_output_features
+        self._replace_last_cnn_layer(out_features=cnn_output_features)
 
         # transformer pooling
         self.transformer_nhead = transformer_nhead
         self.transformer_dropout = transformer_dropout
         self.transformer = nn.TransformerEncoderLayer(
-            d_model=hybrid_setup_cnn_features, 
+            d_model=cnn_output_features, 
             nhead=transformer_nhead, 
             dropout=transformer_dropout,
             batch_first=True,
         )
-        self.linear = nn.Linear(hybrid_setup_cnn_features, 1)
+
+        # initialize encoder
+        model_init_kwargs = {'add_pooling_layer': False} | (model_init_kwargs or {})
+        self.tokenizer = AutoTokenizer.from_pretrained(encoder_model_name_or_path)
+        self.encoder = AutoModel.from_pretrained(encoder_model_name_or_path, **model_init_kwargs)
+        self.max_length = self.tokenizer.model_max_length
+        self.prefix = prefix
+
+        # initialize output layer
+        encoder_n_dim = self.encoder.config.hidden_size
+        self.linear = nn.Linear(cnn_output_features + encoder_n_dim, 1)
 
         # training configuration
         self.mel_bins = mel_bins
@@ -86,9 +102,6 @@ class CNNTrainingModule(L.LightningModule):
         self.lr = lr
         self.lr_reduction_factor = lr_reduction_factor
         self.lr_patience = lr_patience
-
-        # optimizer
-        self.optimizer = optimizer
 
         # compute
         self.compute_batch_size = compute_batch_size
@@ -281,29 +294,43 @@ class CNNTrainingModule(L.LightningModule):
 
         return output
 
-    def forward(self, waveforms: List[Tuple[torch.Tensor, int]], eval_mode: bool = True):
+    def forward(
+        self,
+        waveforms: List[Tuple[torch.Tensor, int]],
+        sentences: List[str],
+        eval_mode: bool = True
+    ):
         # apply aumentations during training
         if not eval_mode:
             waveforms = self._apply_augmentation(waveforms)
 
-        # calculate MEL spectrograms
+        # cnn features
         mel_spectrograms = self._calculate_mel_spectrograms(waveforms)
+        cnn_features = self._cnn_forward_pass_with_chunking(mel_spectrograms)
+        cnn_features = self._cnn_pooling_forward(cnn_features)
 
-        # feed with chunking through CNN
-        features = self._cnn_forward_pass_with_chunking(mel_spectrograms)
-
-        # feed through transformer
-        features = self._cnn_pooling_forward(features)
+        # encoder features
+        sentences = [self.prefix + s for s in sentences]
+        tokenized_sentences = self.tokenizer(
+            sentences,
+            truncation=True,
+            padding=True,
+            return_tensors='pt',
+            max_length=self.max_length,
+        ).to(self.device)
+        encoder_features = self.encoder(**tokenized_sentences).last_hidden_state[:, 0, :]
 
         # classification / regression on features from transformer
+        features = torch.cat([cnn_features, encoder_features], dim=1)
         return self.linear(features)
 
     def forward_step(self, batch, eval_mode: bool = True):
         waveforms = [(w, sr) for w, sr, *_ in batch]
+        sentences = [sentence for _, _, sentence, _ in batch]
         y = torch.tensor([target_value for *_, target_value in batch]).to(self.device)
 
         # feed waveforms through model and calculate loss
-        pred = self(waveforms=waveforms, eval_mode=eval_mode).squeeze()
+        pred = self(waveforms=waveforms, sentences=sentences, eval_mode=eval_mode).squeeze()
         loss = self.loss_fn(pred, y)
 
         # apply sigmoid for classification metrics computation
@@ -323,22 +350,9 @@ class CNNTrainingModule(L.LightningModule):
         loss,
         metrics: Dict[str, int | float],
         step_name: str,
+        batch_size: int,
         prog_bar: bool = False
     ):
-        """
-        Logs loss and metrics.
-
-        Parameters
-        ----------
-        loss
-            Loss.
-        metrics : Dict[str, int | float]
-            Dictionary with metrics values.
-        step_name : str
-            Step name, e.g. "train".
-        prog_bar : bool, optional
-            Whether to also log to progress bar.
-        """
         # log loss and store its value
         self.log(
             f'{step_name}_loss', loss, prog_bar=prog_bar, 
@@ -349,24 +363,24 @@ class CNNTrainingModule(L.LightningModule):
         for metric_name, metric_value in metrics.items():
             self.log(
                 f'{step_name}_{metric_name}', metric_value, 
-                on_step=True, on_epoch=True, 
+                on_step=True, on_epoch=True, batch_size=batch_size,
                 prog_bar=prog_bar
             )
 
     def training_step(self, batch, _):
         loss, metrics = self.forward_step(batch, eval_mode=False)
-        self.store_metrics(loss=loss, metrics=metrics, step_name='train', prog_bar=True)
+        self.store_metrics(loss=loss, metrics=metrics, step_name='train', batch_size=len(batch), prog_bar=True)
         return loss
 
     def validation_step(self, batch, _):
         with torch.no_grad():
             loss, metrics = self.forward_step(batch)
-            self.store_metrics(loss=loss, metrics=metrics, step_name='val', prog_bar=True)
+            self.store_metrics(loss=loss, metrics=metrics, step_name='val', batch_size=len(batch), prog_bar=True)
 
     def test_step(self, batch, _):
         with torch.no_grad():
             loss, metrics = self.forward_step(batch)
-            self.store_metrics(loss=loss, metrics=metrics, step_name='test')
+            self.store_metrics(loss=loss, metrics=metrics, step_name='test', batch_size=len(batch))
 
     def configure_optimizers(self):
         # optimizer
