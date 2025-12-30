@@ -1,0 +1,266 @@
+import os
+import sys
+from typing import Literal
+from pathlib import Path
+import json
+from time import time
+
+import torch
+import lightning as L
+from lightning.pytorch import seed_everything
+from lightning.pytorch.loggers import CSVLogger, MLFlowLogger
+from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor
+import fire
+import mlflow
+import pandas as pd
+
+from src.training.foundation_models import FOUNDATION_MODELS
+from src.training.fine_tuning.hybrid_training_module import HybridTrainingModule
+from src.training.fine_tuning.data_module import FineTuningDataModule
+from src.training.loss_monitor import LossMonitor
+from src.training.epoch_logging import EpochLogger, MLFlowLoggerAdapter
+
+
+EXPERIMENT_NAME = 'Hybrid fine-tuning repeated'
+PROJECT_DIR = Path(os.environ['PROJECT_DIR'])
+MODELS_DIR = Path(os.environ.get("MODELS_DIR", PROJECT_DIR/ "data/models")) / 'fine_tuning'
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+mlflow.set_tracking_uri(os.environ['MLFLOW_TRACKING_URI'])
+timestamp = str(time()).replace('.', '')
+
+
+def repeated_fine_tune_hybrid(
+    cnn_model_name: str,
+    encoder_model_name_or_path: str,
+    pretrained: bool,
+    objective: Literal['classification', 'regression'],
+    data_leakage: bool,
+    evaluate_on_test_split: bool = True,
+    # cross-validation
+    n_folds: int = 5,
+    n_repetitions: int = 2,
+    # dataset
+    ram_optimized_mode: bool = True,
+    downsample_to: int | None = None,
+    hold_out_test_split: bool = True,
+    # spectrogram
+    mel_bins: int = 224,
+    augmentation: Literal[None, 'weak', 'moderate', 'strong', 'mixed'] = None,
+    # compute
+    compute_batch_size: int = 256,
+    # hybrid setup
+    cnn_output_features: int = 512,
+    transformer_nhead: int = 2,
+    transformer_dropout: float = 0.1,
+    # training
+    max_epochs: int = 10,
+    min_epochs: int = 1,
+    scheduler_type: Literal['one_cycle', 'reduce_on_plateau'] = 'reduce_on_plateau',
+    lr_reduction_factor: float = 0.5,
+    lr_patience: int = 0,
+    lr: float = 1e-5,
+    min_delta: float = 1e-3,
+    patience: int = 1,
+    batch_size: int = 32,
+    val_batch_size: int = 32,
+    tags: dict = {},
+    **kwargs
+):
+    if objective == 'classification':
+        target_column_name = 'phq_binary'
+    elif objective == 'regression':
+        target_column_name = 'phq_score'
+    else:
+        raise ValueError(
+            f'Supported values for `objective` are '
+            f'["classification", "regression"], got "{objective}"'
+        )
+
+    for seed in range(n_repetitions):
+        for fold_idx in range(n_folds):
+            seed_everything(
+                (seed + fold_idx) * (seed + fold_idx + 1) // 2 + fold_idx
+            )  # unique seed per (seed, fold_idx) pair
+
+            # initialize model
+            cnn = get_model(cnn_model_name, pretrained)
+
+            # modules
+            model = HybridTrainingModule(
+                cnn=cnn,
+                encoder_model_name_or_path=encoder_model_name_or_path,
+                objective=objective,
+                mel_bins=mel_bins,
+                augmentation=augmentation,
+                scheduler_type=scheduler_type,
+                lr=lr,
+                lr_reduction_factor=lr_reduction_factor,
+                lr_patience=lr_patience,
+                compute_batch_size=compute_batch_size,
+                cnn_output_features=cnn_output_features,
+                transformer_nhead=transformer_nhead,
+                transformer_dropout=transformer_dropout,
+            ).to(DEVICE)
+            data_module = FineTuningDataModule(
+                target_column_name=target_column_name,
+                downsample_to=downsample_to, 
+                hold_out_test_split=hold_out_test_split,
+                batch_size=batch_size, 
+                val_batch_size=val_batch_size,
+                fast_mode=not ram_optimized_mode,
+                fold_idx=fold_idx,
+                n_folds=n_folds,
+                seed=seed,
+                data_leakage=data_leakage,
+            )
+
+            # loggers
+            model_name = f'{cnn_model_name}__{encoder_model_name_or_path}'
+            csv_logger = CSVLogger(save_dir=MODELS_DIR / model_name, name=None)
+
+            # callbacks
+            early_stopping = EarlyStopping(
+                monitor="val_loss", mode="min", patience=patience, min_delta=min_delta, verbose=True
+            )
+            lr_monitor = LearningRateMonitor(logging_interval='step')
+            loss_monitor = LossMonitor()
+            epoch_logger = EpochLogger()
+
+            # save training hyperparams
+            train_hparams = {
+                'task': 'fine-tuning',
+                'objective': objective,
+                'data_leakage': str(data_leakage),
+                'n_folds': n_folds,
+                'n_repetitions': n_repetitions,
+                'lr': lr,
+                'batch_size': batch_size,
+                'val_batch_size': val_batch_size,
+                'cross_validation': timestamp,
+                'experiment_name': EXPERIMENT_NAME,
+                'seed': str(seed),
+                'fold_idx': str(fold_idx),
+                **tags,
+                **kwargs
+            }
+            Path(csv_logger.log_dir).mkdir(parents=True, exist_ok=True)
+            train_hparams_path = Path(csv_logger.log_dir) / 'train_hparams.json'
+            with open(train_hparams_path, 'w') as f:
+                json.dump(train_hparams, f, indent=4)
+
+            # save script execution command
+            execution_command_path = Path(csv_logger.log_dir) / 'command.txt'
+            with open(execution_command_path, 'w') as f:
+                f.write(' '.join(sys.argv))
+
+            # save model signature
+            model_signature_path = Path(csv_logger.log_dir) / 'model_signature.txt'
+            with open(model_signature_path, 'w') as f:
+                f.write(str(model))
+
+            # mlflow run and logger setup
+            if mlflow.get_experiment_by_name(EXPERIMENT_NAME) is None:
+                mlflow.create_experiment(EXPERIMENT_NAME)
+            mlflow.set_experiment(EXPERIMENT_NAME)
+            mlflow.start_run(
+                run_name=f'{cnn_model_name} & {encoder_model_name_or_path} ("{objective}", {pretrained=}, {data_leakage=})', 
+                tags={
+                    'experiment_name': EXPERIMENT_NAME,
+                    'cross_validation': timestamp,
+                    'objective': objective,
+                    **tags
+                }
+            )
+            mlflow_logger = MLFlowLoggerAdapter(
+                mlflow_logger=MLFlowLogger(
+                    experiment_name=EXPERIMENT_NAME,
+                    run_id=mlflow.active_run().info.run_id
+                )
+            )  # this is a workaround for epochs logging
+
+            # trainer
+            trainer = L.Trainer(
+                max_epochs=max_epochs,
+                min_epochs=min_epochs,
+                callbacks=[
+                    early_stopping, 
+                    lr_monitor, 
+                    loss_monitor,
+                    epoch_logger,
+                ],
+                logger=[csv_logger, mlflow_logger],
+                default_root_dir=model_name,
+                log_every_n_steps=1,
+                **kwargs,
+            )
+
+            # log hyperparams and dataset info
+            mlflow.log_params(train_hparams)
+            for context, data_source in [
+                ('Labelled dataset', data_module.dataset_path), 
+                ('Split dataset', data_module.split_df_path)
+            ]:
+                if isinstance(data_source, Path):
+                    data_source = data_source.as_posix()
+
+                dataset_tags = {'local_dataset_path': data_source, 'type': context}
+                mlflow.log_input(
+                    dataset=mlflow.data.from_pandas(
+                        df=pd.read_csv(data_source),
+                        source=mlflow.data.dataset_source.DatasetSource.from_dict(dataset_tags),
+                        name=Path(data_source).stem,
+                    ),
+                    context=context,
+                    tags=dataset_tags,
+                )
+
+            try:
+                # training
+                trainer.fit(model, data_module)
+
+                # testing
+                if evaluate_on_test_split:
+                    trainer.test(model, data_module)
+
+                # log artifacts
+                mlflow.log_artifact(model_signature_path)
+                mlflow.log_artifact(execution_command_path)
+                mlflow.log_artifact(loss_monitor.artifact_path)
+                mlflow.log_artifact(train_hparams_path.as_posix())
+                mlflow.log_artifact(Path(csv_logger.log_dir, 'metrics.csv').as_posix())
+
+                mlflow.end_run()
+            except Exception as e:
+                # create empty file named "failure" on exception
+                open(Path(csv_logger.log_dir) / 'failure', 'a').close()
+
+                mlflow.end_run('FAILED')
+                raise e
+
+
+def get_model(cnn_model_name: str, pretrained: bool):
+    for size_category in FOUNDATION_MODELS.values():
+        if cnn_model_name in size_category:
+            return size_category[cnn_model_name](pretrained=pretrained)
+
+    raise ValueError(f'Model "{cnn_model_name}" is not supported')
+
+
+def main(
+    cnn_model_name: str,
+    objective: str,
+    pretrained: bool = False,
+    tags: dict = {},
+    **kwargs
+):
+    repeated_fine_tune_hybrid(
+        cnn_model_name=cnn_model_name,
+        pretrained=pretrained,
+        objective=objective,
+        tags=tags,
+        **kwargs
+    )
+
+if __name__ == "__main__":
+    fire.Fire(main)
