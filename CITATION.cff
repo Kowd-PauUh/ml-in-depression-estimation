@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "If you use this software or data in your research, please cite the following paper."
+title: "Common Pitfalls and Recommendations for Use of Machine Learning in Depression Severity Estimation: DAIC-WOZ Study"
+type: software
+
+authors:
+  - family-names: Danylenko
+    given-names: Ivan
+  - family-names: Unold
+    given-names: Olgierd
+
+keywords:
+  - affective computing
+  - DAIC-WOZ
+  - depression severity estimation
+  - machine learning
+  - multimodal learning
+  - PHQ-8
+
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Danylenko
+      given-names: Ivan
+    - family-names: Unold
+      given-names: Olgierd
+  title: "Common Pitfalls and Recommendations for Use of Machine Learning in Depression Severity Estimation: DAIC-WOZ Study"
+  journal: "Applied Sciences"
+  volume: 16
+  issue: 1
+  pages: 422
+  year: 2026
+  doi: "10.3390/app16010422"
