@@ -18,3 +18,17 @@ Below is the list of steps required to reproduce the results of our paper from s
 
 You can omit data download and set different data paths than default.<br>
 For more information examine [data_module.py](src/training/fine_tuning/data_module.py).
+
+## Citation
+
+```bibtex
+@article{danylenko2026common,
+  author = {Danylenko, Ivan and Unold, Olgierd},
+  doi = {10.3390/app16010422},
+  journal = {Applied Sciences},
+  number = {1},
+  title = {{Common Pitfalls and Recommendations for Use of Machine Learning in Depression Severity Estimation: DAIC-WOZ Study}},
+  volume = {16},
+  year = {2026}
+}
+```
