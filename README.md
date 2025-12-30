@@ -14,6 +14,7 @@ Below is the list of steps required to reproduce the results of our paper from s
 <br>9. _(container shell)_ Reproduce baseline (mean predictor): `python3 src/scripts/fine_tuning/baseline.py`
 <br>10. _(container shell)_ Reproduce training results on audio modality: (i) without data leakage `sh src/scripts/fine_tuning/audio/reproduce_no_leakage.sh`, (ii) with data leakage `sh src/scripts/fine_tuning/audio/reproduce_leakage.sh`
 <br>11. _(container shell)_ Reproduce training results on text modality: (i) without data leakage `sh src/scripts/fine_tuning/text/reproduce_no_leakage.sh`, (ii) with data leakage `sh src/scripts/fine_tuning/text/reproduce_leakage.sh`
+<br>12. _(container shell)_ Reproduce training results on combined modality: (i) without data leakage `sh src/scripts/fine_tuning/hybrid/reproduce_no_leakage.sh`, (ii) with data leakage `sh src/scripts/fine_tuning/hybrid/reproduce_leakage.sh`
 
 You can omit data download and set different data paths than default.<br>
 For more information examine [data_module.py](src/training/fine_tuning/data_module.py).
